@@ -1,0 +1,3811 @@
+[
+{
+"recipe": [
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.9373,
+0.9137,
+0.8627
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+]
+],
+"rgb": [
+0.3529,
+0.4314,
+0.6353
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.7216,
+0.7569,
+0.7922
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.8588,
+0.8588,
+0.8353
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9098,
+0.8941,
+0.8549
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+]
+],
+"rgb": [
+0.5529,
+0.6078,
+0.7294
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.8275,
+0.8314,
+0.8235
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.902,
+0.8863,
+0.851
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9255,
+0.9059,
+0.8588
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+]
+],
+"rgb": [
+0.7255,
+0.5412,
+0.2118
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.8667,
+0.7569,
+0.4902
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.9098,
+0.851,
+0.698
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9294,
+0.8902,
+0.8
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+]
+],
+"rgb": [
+0.6118,
+0.2902,
+0.1882
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.8118,
+0.5686,
+0.5059
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.8902,
+0.7725,
+0.7176
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9176,
+0.8549,
+0.8039
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+]
+],
+"rgb": [
+0.8196,
+0.2275,
+0.1412
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.9059,
+0.5098,
+0.4824
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.9294,
+0.7294,
+0.6863
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9333,
+0.8392,
+0.7922
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.3608,
+0.298,
+0.2275
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.6824,
+0.6078,
+0.5451
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.8314,
+0.7843,
+0.7294
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.8941,
+0.8627,
+0.8078
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.1176,
+0.1059,
+0.098
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.5059,
+0.4941,
+0.4863
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.7333,
+0.7176,
+0.6902
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.8588,
+0.8392,
+0.8
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.1843,
+0.3333,
+0.6745
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.5255,
+0.6549,
+0.8078
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.7686,
+0.8157,
+0.8392
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.8706,
+0.8745,
+0.851
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.9098,
+0.698,
+0.1098
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.9373,
+0.8196,
+0.3294
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.9373,
+0.8824,
+0.6078
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9373,
+0.902,
+0.7529
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.0902,
+0.1412,
+0.2549
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.2275,
+0.3882,
+0.5216
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.4706,
+0.6157,
+0.702
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.698,
+0.7686,
+0.7843
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.2275,
+0.2863,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.7608,
+0.7686,
+0.7255
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.8824,
+0.8667,
+0.8196
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9176,
+0.898,
+0.8471
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.3725,
+0.5647,
+0.4627
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.7569,
+0.8078,
+0.7412
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.8784,
+0.8784,
+0.8235
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.9176,
+0.902,
+0.8471
+]
+},
+{
+"recipe": [
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.2471,
+0.5098,
+0.4157
+]
+},
+{
+"recipe": [
+[
+"copper green",
+1
+],
+[
+"lead white",
+1
+]
+],
+"rgb": [
+0.5608,
+0.7216,
+0.6471
+]
+},
+{
+"recipe": [
+[
+"copper green",
+1
+],
+[
+"lead white",
+4
+]
+],
+"rgb": [
+0.7804,
+0.8314,
+0.7765
+]
+},
+{
+"recipe": [
+[
+"copper green",
+1
+],
+[
+"lead white",
+12
+]
+],
+"rgb": [
+0.8745,
+0.8784,
+0.8275
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"pale smalt",
+1
+]
+],
+"rgb": [
+0.4353,
+0.5098,
+0.6784
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"pale smalt",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8157,
+0.8275,
+0.8235
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"yellow ochre",
+1
+]
+],
+"rgb": [
+0.5608,
+0.5373,
+0.2863
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"yellow ochre",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8353,
+0.8,
+0.6627
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"red earth",
+1
+]
+],
+"rgb": [
+0.5294,
+0.3333,
+0.2941
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"red earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8157,
+0.7098,
+0.6784
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"vermilion",
+1
+]
+],
+"rgb": [
+0.6549,
+0.2902,
+0.2471
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"vermilion",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8627,
+0.6627,
+0.6431
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.3725,
+0.3451,
+0.3255
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"raw umber",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.749,
+0.7176,
+0.6902
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.2039,
+0.2078,
+0.2431
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6549,
+0.6588,
+0.6588
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.2392,
+0.3686,
+0.6784
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6784,
+0.749,
+0.8118
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.6275,
+0.6431,
+0.1961
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8627,
+0.8392,
+0.5608
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1137,
+0.1922,
+0.3176
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.3843,
+0.5412,
+0.6549
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.3176,
+0.3922,
+0.4824
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7922,
+0.8039,
+0.7882
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.3647,
+0.502,
+0.5412
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7922,
+0.8196,
+0.7922
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.2824,
+0.4902,
+0.4745
+]
+},
+{
+"recipe": [
+[
+"smalt",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.698,
+0.7765,
+0.7451
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"yellow ochre",
+1
+]
+],
+"rgb": [
+0.6745,
+0.5882,
+0.2902
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"yellow ochre",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8745,
+0.8235,
+0.6706
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"red earth",
+1
+]
+],
+"rgb": [
+0.6157,
+0.3647,
+0.3059
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"red earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8471,
+0.7216,
+0.6784
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"vermilion",
+1
+]
+],
+"rgb": [
+0.7647,
+0.3098,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"vermilion",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.898,
+0.6941,
+0.6627
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.4392,
+0.3882,
+0.3451
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"raw umber",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7843,
+0.7451,
+0.702
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.2392,
+0.2353,
+0.251
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6941,
+0.6863,
+0.6706
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.2745,
+0.4235,
+0.7216
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7059,
+0.7686,
+0.8235
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.7725,
+0.698,
+0.1804
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.902,
+0.8588,
+0.5686
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1176,
+0.2078,
+0.3333
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4078,
+0.5647,
+0.6667
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.4196,
+0.4824,
+0.5137
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8275,
+0.8275,
+0.7961
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.4627,
+0.6,
+0.5843
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8275,
+0.8431,
+0.8039
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.3294,
+0.549,
+0.502
+]
+},
+{
+"recipe": [
+[
+"pale smalt",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7255,
+0.7961,
+0.7529
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"red earth",
+1
+]
+],
+"rgb": [
+0.6667,
+0.3961,
+0.2078
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"red earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8627,
+0.7137,
+0.5686
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"vermilion",
+1
+]
+],
+"rgb": [
+0.8,
+0.3412,
+0.1882
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"vermilion",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.902,
+0.6667,
+0.5451
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.502,
+0.4157,
+0.2196
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"raw umber",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8,
+0.7255,
+0.5765
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.3137,
+0.298,
+0.1529
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7137,
+0.6784,
+0.549
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.3922,
+0.4824,
+0.3412
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7373,
+0.7608,
+0.6667
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.8078,
+0.6157,
+0.1686
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.9137,
+0.8235,
+0.4824
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1333,
+0.2392,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4235,
+0.5647,
+0.5647
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.5451,
+0.4824,
+0.2235
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8431,
+0.7922,
+0.6196
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.5804,
+0.5569,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8471,
+0.8078,
+0.6392
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.4118,
+0.5294,
+0.2941
+]
+},
+{
+"recipe": [
+[
+"yellow ochre",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.749,
+0.7765,
+0.6118
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"vermilion",
+1
+]
+],
+"rgb": [
+0.7176,
+0.2588,
+0.1608
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"vermilion",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8784,
+0.6,
+0.5529
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.4824,
+0.298,
+0.2078
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"raw umber",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7843,
+0.6431,
+0.5804
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.3098,
+0.2,
+0.1412
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.698,
+0.5922,
+0.5529
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.4,
+0.3059,
+0.349
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7333,
+0.6745,
+0.6824
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.7451,
+0.4706,
+0.1804
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8863,
+0.7451,
+0.4863
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1529,
+0.1882,
+0.2667
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4235,
+0.502,
+0.5725
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.5059,
+0.2941,
+0.2078
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8275,
+0.702,
+0.6471
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.549,
+0.3529,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8235,
+0.7098,
+0.651
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.4196,
+0.3725,
+0.298
+]
+},
+{
+"recipe": [
+[
+"red earth",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7412,
+0.6902,
+0.6275
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"raw umber",
+1
+]
+],
+"rgb": [
+0.5843,
+0.2667,
+0.1725
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"raw umber",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8314,
+0.6235,
+0.5765
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.3961,
+0.1882,
+0.1098
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7451,
+0.5647,
+0.5373
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.4941,
+0.2745,
+0.302
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7686,
+0.6196,
+0.6353
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.8902,
+0.4,
+0.1765
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.9294,
+0.702,
+0.4824
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1882,
+0.1882,
+0.2588
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4784,
+0.4863,
+0.5569
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.6667,
+0.251,
+0.1569
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8745,
+0.6588,
+0.6196
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.6902,
+0.302,
+0.2196
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8745,
+0.6706,
+0.6275
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.5137,
+0.3333,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"vermilion",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7843,
+0.6549,
+0.6039
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"bone black",
+1
+]
+],
+"rgb": [
+0.2196,
+0.1961,
+0.1608
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"bone black",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.651,
+0.6157,
+0.5804
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.2902,
+0.3176,
+0.3804
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6784,
+0.6941,
+0.7059
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.5608,
+0.4941,
+0.1882
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8275,
+0.7725,
+0.4941
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1255,
+0.1804,
+0.2627
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4078,
+0.5255,
+0.5961
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.3255,
+0.2941,
+0.2353
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7569,
+0.7176,
+0.6627
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.3765,
+0.3686,
+0.2941
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7647,
+0.7373,
+0.6745
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.3098,
+0.3843,
+0.3216
+]
+},
+{
+"recipe": [
+[
+"raw umber",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6784,
+0.7059,
+0.6392
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"cobalt blue",
+1
+]
+],
+"rgb": [
+0.1686,
+0.2039,
+0.298
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"cobalt blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.5882,
+0.6314,
+0.6745
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.3451,
+0.3725,
+0.1294
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7294,
+0.7176,
+0.4549
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.0902,
+0.1333,
+0.2157
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.3647,
+0.4863,
+0.5686
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.1412,
+0.1451,
+0.1333
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6627,
+0.6588,
+0.6314
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.1882,
+0.2118,
+0.1961
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6706,
+0.6784,
+0.6471
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.1882,
+0.2745,
+0.251
+]
+},
+{
+"recipe": [
+[
+"bone black",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.5922,
+0.6471,
+0.6118
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"chrome yellow",
+1
+]
+],
+"rgb": [
+0.4196,
+0.5882,
+0.2431
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"chrome yellow",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7725,
+0.8157,
+0.5686
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1098,
+0.1922,
+0.3373
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.3569,
+0.5255,
+0.6627
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.2118,
+0.3294,
+0.5451
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6902,
+0.7529,
+0.7922
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.2392,
+0.4157,
+0.6
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.698,
+0.7725,
+0.8
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.2235,
+0.4392,
+0.5098
+]
+},
+{
+"recipe": [
+[
+"cobalt blue",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.6275,
+0.7451,
+0.7529
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"Prussian blue",
+1
+]
+],
+"rgb": [
+0.1216,
+0.2863,
+0.2196
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"Prussian blue",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4549,
+0.6235,
+0.5098
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.6353,
+0.5922,
+0.1686
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8824,
+0.8431,
+0.5373
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.6627,
+0.6627,
+0.1804
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8745,
+0.851,
+0.5373
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.4392,
+0.6078,
+0.2235
+]
+},
+{
+"recipe": [
+[
+"chrome yellow",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7804,
+0.8235,
+0.5333
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"green earth",
+1
+]
+],
+"rgb": [
+0.098,
+0.1569,
+0.2588
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"green earth",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.3882,
+0.5451,
+0.6392
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.1059,
+0.1922,
+0.2941
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.4078,
+0.5686,
+0.6549
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.1137,
+0.2314,
+0.3137
+]
+},
+{
+"recipe": [
+[
+"Prussian blue",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.3843,
+0.5647,
+0.6314
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"Rinmann's green",
+1
+]
+],
+"rgb": [
+0.3137,
+0.4392,
+0.3804
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"Rinmann's green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.8078,
+0.8235,
+0.7725
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.2471,
+0.4627,
+0.3843
+]
+},
+{
+"recipe": [
+[
+"green earth",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7059,
+0.7804,
+0.7216
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+],
+[
+"copper green",
+1
+]
+],
+"rgb": [
+0.2824,
+0.5216,
+0.4314
+]
+},
+{
+"recipe": [
+[
+"Rinmann's green",
+1
+],
+[
+"copper green",
+1
+],
+[
+"lead white",
+3
+]
+],
+"rgb": [
+0.7059,
+0.7922,
+0.7294
+]
+}
+]

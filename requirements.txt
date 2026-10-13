@@ -1,0 +1,10 @@
+numpy
+pillow
+scipy
+opencv-python-headless
+# subject masks (subject-last painting)
+rembg
+# depth (carving, living paintings) and the music voice check
+torch
+transformers
+certifi

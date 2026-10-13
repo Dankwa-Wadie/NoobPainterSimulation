@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+vendor/
+out/
+# the recordings are fetched by tools/fetch_classical.py; their licences are in manifest.json
+assets/music/classical/*
+!assets/music/classical/manifest.json

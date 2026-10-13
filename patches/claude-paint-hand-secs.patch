@@ -1,0 +1,17 @@
+diff --git a/crates/easel/src/api.rs b/crates/easel/src/api.rs
+index 82cdad5..920cb6c 100644
+--- a/crates/easel/src/api.rs
++++ b/crates/easel/src/api.rs
+@@ -2132,6 +2132,12 @@ pub fn install(lua: &Lua, st: S) -> Result<()> {
+             })?;
+             Ok(time::time_of_day(st1.borrow().clock))
+         })?)?;
++        // hand_secs(): the painting's hand-time clock in seconds (read only; added in
++        // NoobPainterSimulation so a playback can put the hand on each stroke)
++        let st1 = st.clone();
++        g.set("hand_secs", lua.create_function(move |_, ()| {
++            Ok(st1.borrow().canvas.as_ref().map(|c| c.tally().secs).unwrap_or(0.0))
++        })?)?;
+         // drying(x, y): "open", "setting", "tacky" or "dry": the paint there, as a knuckle feels it
+         let st1 = st.clone();
+         g.set("drying", lua.create_function(move |_, (x, y): (f32, f32)| {
