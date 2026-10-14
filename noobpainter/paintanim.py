@@ -30,8 +30,11 @@ DEFAULTS: dict[str, Any] = {
     "seconds": 20.0,
     "fps": 24,
     "hold": 2,                       # each painting held this many frames ("on twos")
+    # From an idea: a portrait Short. From your video or pictures: their own shape
+    # (the clip's, or the first picture's), at these sizes on its long side.
     "size": [1080, 1920],
     "work": [720, 1280],             # painted at this size, then scaled up
+    "long_side": 1920, "work_long_side": 1280,
 }
 # What moves, when the video model makes the motion. Subtle on purpose (2026-10-13):
 # Wan 2.2 5B on this Mac animates what is already in the picture well (breathing,
@@ -171,14 +174,54 @@ class Drift:
         return moved, form_angles(moved)
 
 
+def fit(w: int, h: int, long_side: int) -> tuple[int, int]:
+    """A shape of w:h with `long_side` pixels on its long side, in even pixels (for H.264)."""
+    s = long_side / max(w, h)
+    return max(2, round(w * s / 2) * 2), max(2, round(h * s / 2) * 2)
+
+
+def video_shape(video: Path) -> tuple[int, int]:
+    """A clip's width and height as it plays (a phone clip filmed upright is turned)."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                          "stream=width,height:stream_side_data=rotation", "-of", "json", str(video)],
+                         capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        v = json.loads(out.stdout)["streams"][0]
+    except (ValueError, KeyError, IndexError):
+        raise ValueError(f"{video.name} can't be read as a video") from None
+    w, h = int(v["width"]), int(v["height"])
+    rot = next((int(d.get("rotation", 0)) for d in v.get("side_data_list") or []), 0)
+    return (h, w) if abs(rot) % 180 == 90 else (w, h)
+
+
 def fill(img: np.ndarray, size: tuple[int, int]) -> np.ndarray:
-    """A picture of any shape filling `size`: scaled to cover it, cut centred."""
+    """A picture of any shape in a frame of `size`. Nearly the same shape: scaled to cover
+    it, cut centred. Otherwise it is fitted whole, nothing cut off, and the space around
+    it is the same picture enlarged and blurred: painted over like the rest, it reads as
+    the painting's own background, not as bars."""
     W, H = size
     h, w = img.shape[:2]
-    s = max(W / w, H / h)
-    img = cv2.resize(img, (max(W, round(w * s)), max(H, round(h * s))), interpolation=cv2.INTER_AREA)
-    y, x = (img.shape[0] - H) // 2, (img.shape[1] - W) // 2
-    return img[y:y + H, x:x + W]
+    if abs((w / h) / (W / H) - 1) < 0.04:
+        s = max(W / w, H / h)
+        img = cv2.resize(img, (max(W, round(w * s)), max(H, round(h * s))), interpolation=cv2.INTER_AREA)
+        y, x = (img.shape[0] - H) // 2, (img.shape[1] - W) // 2
+        return img[y:y + H, x:x + W]
+    s = max(W / w, H / h)                         # the background: covers the frame
+    back = cv2.resize(img, (max(W, round(w * s)), max(H, round(h * s))), interpolation=cv2.INTER_AREA)
+    y, x = (back.shape[0] - H) // 2, (back.shape[1] - W) // 2
+    back = cv2.GaussianBlur(back[y:y + H, x:x + W], (0, 0), max(W, H) / 40)
+    back = (back.astype(np.float32) * 0.85).astype(np.uint8)       # a touch darker: the picture leads
+    s = min(W / w, H / h)                         # the picture: whole
+    fw, fh = max(1, round(w * s)), max(1, round(h * s))
+    front = cv2.resize(img, (fw, fh), interpolation=cv2.INTER_AREA)
+    y, x = (H - fh) // 2, (W - fw) // 2
+    # a soft edge, so the picture melts into its background instead of sitting on it
+    m = np.zeros((H, W), np.float32)
+    m[y:y + fh, x:x + fw] = 1
+    m = cv2.GaussianBlur(m, (0, 0), max(W, H) / 120)[..., None]
+    canvas = back.copy()
+    canvas[y:y + fh, x:x + fw] = front
+    return (canvas * m + back * (1 - m)).astype(np.uint8)
 
 
 class Sway:
@@ -315,7 +358,7 @@ def render(motion: Drift | Morph, kind: str, out: Path, cfg: dict[str, Any], mus
 
 def footage(video: Path, folder: Path, size: tuple[int, int], fps: int = 12) -> tuple[list[np.ndarray], float]:
     """A real clip as the motion, the way "Loving Vincent" was made: its frames at
-    `fps`, cropped to portrait (centred) and sized for the painter."""
+    `fps`, in the clip's own shape (`size`) and sized for the painter."""
     folder.mkdir(parents=True, exist_ok=True)
     W, H = size
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-vf",
@@ -349,6 +392,14 @@ def make(idea: str, kind: str, config: dict[str, Any] | None = None, account: st
         progress.start(account, f"Animating: {idea}", kind="painting")
     progress.set_workdir(workdir)
     try:
+        # your clip's or first picture's own shape (unless a size was set)
+        if "size" not in (config.get("paintanim") or {}):
+            first = reference_images[0] if reference_images else reference_image
+            shape = (video_shape(source_video) if source_video else
+                     (lambda i: (i.shape[1], i.shape[0]))(cv2.imread(str(first))) if first else None)
+            if shape:
+                cfg["size"] = list(fit(*shape, int(cfg["long_side"])))
+                cfg["work"] = list(fit(*shape, int(cfg["work_long_side"])))
         Wk, Hk = cfg["work"]
         if source_video:                              # real footage: no picture to draw
             progress.stage("plan", "Reading the footage")
