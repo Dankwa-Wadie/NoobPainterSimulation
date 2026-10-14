@@ -229,6 +229,13 @@ def _recut(job: dict, hand: bool) -> None:
         traceback.print_exc()
 
 
+def _url(path: str | Path) -> str:
+    """A file under out/ui as a link the page can load. as_posix: on Windows the path's
+    backslashes made a link the browser couldn't follow (the finished picture didn't show)."""
+    rel = Path(path).resolve().relative_to(OUT.resolve()).as_posix()
+    return "/out/" + urllib.parse.quote(rel)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):                                # quiet
         pass
@@ -267,14 +274,15 @@ class Handler(BaseHTTPRequestHandler):
             data = {k: _job.get(k) for k in ("status", "style", "error", "title", "description")}
             data.update({k: state.get(k) for k in ("stage", "detail", "percent", "log")})
             if state.get("preview"):
-                data["preview"] = "/out/" + str(Path(state["preview"]).resolve().relative_to(OUT.resolve())) \
+                data["preview"] = _url(state["preview"]) \
                     if Path(state["preview"]).resolve().is_relative_to(OUT.resolve()) else None
                 data["preview_at"] = state.get("preview_at")
             for key in ("video", "image"):
                 if _job.get(key):
-                    data[key] = "/out/" + str(Path(_job[key]).resolve().relative_to(OUT.resolve()))
-            if data.get("video") and _job.get("stamp"):
-                data["video"] += f"?v={_job['stamp']:.0f}"       # a cut-again video is fetched afresh
+                    data[key] = _url(_job[key])
+            for key in ("video", "image"):
+                if data.get(key) and _job.get("stamp"):
+                    data[key] += f"?v={_job['stamp']:.0f}"      # a cut-again video is fetched afresh
             import pipeline
             row = next((r for r in styles() if r["name"] == _job.get("style")), {})
             data["recut"] = bool(_job.get("status") == "done" and _job.get("out") and row.get("hand")
