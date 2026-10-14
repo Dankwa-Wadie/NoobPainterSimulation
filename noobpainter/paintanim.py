@@ -171,6 +171,39 @@ class Drift:
         return moved, form_angles(moved)
 
 
+def fill(img: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """A picture of any shape filling `size`: scaled to cover it, cut centred."""
+    W, H = size
+    h, w = img.shape[:2]
+    s = max(W / w, H / h)
+    img = cv2.resize(img, (max(W, round(w * s)), max(H, round(h * s))), interpolation=cv2.INTER_AREA)
+    y, x = (img.shape[0] - H) // 2, (img.shape[1] - W) // 2
+    return img[y:y + H, x:x + W]
+
+
+class Sway:
+    """One figure and no other poses: it breathes and sways, slowly. The bottom stays
+    put; the higher up, the more it moves, as a body does. Loops."""
+
+    def __init__(self, img: np.ndarray, seed: int):
+        self.img = img
+        h, w = img.shape[:2]
+        self.yy, self.xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        self.lift = ((h - self.yy) / h) ** 1.5             # 0 at the bottom, 1 at the top
+        self.phase = (seed % 100) / 100 * 2 * np.pi
+
+    def frame(self, t: float, seconds: float) -> tuple[np.ndarray, np.ndarray]:
+        h, w = self.img.shape[:2]
+        f = t / seconds
+        breath = 0.012 * np.sin(2 * np.pi * f * 4)                       # four breaths a loop
+        sway = 0.018 * w * np.sin(2 * np.pi * f * 2 + self.phase)       # two sways a loop
+        mx = self.xx - sway * self.lift + (self.xx - w / 2) * breath * 0.5 * self.lift
+        my = self.yy + (h - self.yy) * breath * self.lift
+        img = cv2.remap(self.img, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_LINEAR,
+                        borderMode=cv2.BORDER_REPLICATE)
+        return img, form_angles(img, 10)
+
+
 class Morph:
     """One figure in several poses, each smeared into the next along optical flow."""
 
@@ -296,8 +329,10 @@ def footage(video: Path, folder: Path, size: tuple[int, int], fps: int = 12) -> 
 
 def make(idea: str, kind: str, config: dict[str, Any] | None = None, account: str = "",
          workdir: Path | None = None, reference_image: Path | None = None,
-         source_video: Path | None = None) -> dict[str, Any]:
-    """One idea (or a picture, or a clip) -> one painted animation, saved in `workdir`."""
+         source_video: Path | None = None, reference_images: list[Path] | None = None) -> dict[str, Any]:
+    """One idea (or a picture, or a clip) -> one painted animation, saved in `workdir`.
+    oil_morph with several pictures (`reference_images`): they are the poses, in order,
+    each smeared into the next and the last back into the first, so it loops."""
     import datetime as dt
     import hashlib
     import carving
@@ -329,22 +364,26 @@ def make(idea: str, kind: str, config: dict[str, Any] | None = None, account: st
         local = {**((config.get("longform") or {}).get("local_image") or {}), "style": look,
                  "negative": "text, watermark, signature, frame, photo", "width": 576, "height": 1024}
         lcfg = {"longform": {"local_image": local}}
+        given = [Path(p) for p in (reference_images or ([reference_image] if reference_image else []))]
         poses = 3 if kind == "oil_morph" else 1
+        if given and (kind != "oil_morph" or len(given) > 1 or not localimage.installed(
+                localimage.settings(lcfg))):
+            # your pictures, and no image model: several are the poses; one alone sways
+            poses = len(given) if kind == "oil_morph" else 1
         pics = []
         try:
             for i in range(poses):
                 p = workdir / f"reference-{i}.png"
-                if i == 0 and reference_image:
+                if i < len(given):
                     import shutil
-                    shutil.copy(reference_image, p)
+                    shutil.copy(given[i], p)
                 elif not p.exists():
                     prompt = idea if i == 0 else f"{idea}, {['turning to the side', 'looking up'][i - 1]}"
                     localimage.generate(prompt, p, lcfg, seed=seed + i)
                 pics.append(p)
         finally:
             localimage.release(localimage.settings(lcfg))
-        imgs = [cv2.resize(cv2.cvtColor(cv2.imread(str(p)), cv2.COLOR_BGR2RGB), (Wk, Hk),
-                           interpolation=cv2.INTER_AREA) for p in pics]
+        imgs = [fill(cv2.cvtColor(cv2.imread(str(p)), cv2.COLOR_BGR2RGB), (Wk, Hk)) for p in pics]
         progress.stage("plan", "Working out the motion")
         import wanvideo
         # Procedural motion by default: local Wan broke too often on this Mac (a sunflower
@@ -370,8 +409,10 @@ def make(idea: str, kind: str, config: dict[str, Any] | None = None, account: st
                                                clip_dir, config, seed)
                 motion = Clip([cv2.resize(cv2.cvtColor(cv2.imread(str(f)), cv2.COLOR_BGR2RGB), (Wk, Hk),
                                           interpolation=cv2.INTER_AREA) for f in frames])
-        elif kind == "oil_morph":
-            motion: Drift | Morph = Morph(imgs)
+        elif kind == "oil_morph" and len(imgs) > 1:
+            motion: Drift | Morph | Sway = Morph(imgs)
+        elif kind == "oil_morph":                     # one picture, no poses to smear between
+            motion = Sway(imgs[0], seed)
         else:
             d = carving.depth(pics[0])
             motion = Drift(imgs[0], cv2.resize(d.astype(np.float32), (Wk, Hk)), kind, seed)

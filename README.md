@@ -71,7 +71,7 @@ Calm public-domain classical music plays underneath.
 - **Pen** — every mark one pen line: a maze that forms the picture, op-art waves, one continuous line.
 - **Compass spiral** — the picture drawn as one spiral of compass arcs; the line weight carries the picture.
 - **Carving and clay** — a 3D block carved away (or clay built up) bit by bit, rendered in Blender under raking light, in wood, marble or terracotta.
-- **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*).
+- **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*). Oil paint (moving) takes several pictures: they are its poses, in order, each smeared into the next in black oil paint and the last back into the first, so it loops. With one picture it sways gently; no image model is needed either way.
 - **Bizarre manga** — made as manga is: a blue pencil rough, brush-pen ink (face first), hatching and solid blacks, the blue fades out, then flat bold colour under the ink. With `--hand`, a hand holds the pencil for the rough and the pen for the ink.
 - **Comic halftone** — ink and printed dot shading over the whole panel; it fades in, holds, then pushes in as the picture softens (the dots stay crisp).
 
@@ -186,7 +186,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui   # opens http://127.0.0.1:8770
 ```
 
-Drop in a picture (or a short clip for the moving styles), pick a style from the
+Drop in a picture (several for Oil paint (moving): put them in order with the arrows on
+their thumbnails; or a short clip for the moving styles), pick a style from the
 preview cards, and choose what to make: **the painting video** (pick its length and
 whether to show a hand) or **just the finished picture**, which is quicker, keeps your
 picture's shape and is a PNG to download. The moving and ink styles are videos only.
@@ -207,6 +208,7 @@ python -m noobpainter paint photo.jpg --style van_gogh --picture-only   # just t
 python -m noobpainter paint portrait.png --style bizarre_manga
 python -m noobpainter paint photo.jpg --style relief_wood      # carved (Blender)
 python -m noobpainter paint --video clip.mp4 --style anim_van_gogh
+python -m noobpainter paint pose1.jpg pose2.jpg pose3.jpg --style anim_oil_morph   # poses, looped
 ```
 
 Each run writes `painting.mp4`, the finished `painting.png` and `credits.txt` (title,

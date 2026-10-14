@@ -11,7 +11,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(prog="noobpainter", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("paint", help="paint a picture (or an idea, or a clip) into a video")
-    p.add_argument("picture", nargs="?", help="a picture to paint (PNG/JPEG); or use --idea")
+    p.add_argument("picture", nargs="*", help="a picture to paint (PNG/JPEG); or use --idea. "
+                   "anim_oil_morph takes several: the poses, in order, looped")
     p.add_argument("--idea", default="", help="what to paint, drawn first by a local image model")
     p.add_argument("--video", help="a clip to repaint frame by frame (anim_* styles)")
     p.add_argument("--style", default="contemporary",
@@ -46,7 +47,8 @@ def main() -> int:
     res = pipeline.make(a.idea, a.style, a.out, {"painting": {"seconds": a.seconds, "playback": not a.picture_only,
                                                               "music": a.music},
                                                  "handplay": {"hand_overlay": a.hand}},
-                        picture=a.picture, video=a.video)
+                        picture=a.picture[0] if a.picture else None, video=a.video,
+                        pictures=a.picture)
     print(res.get("video") or res["image"])
     return 0
 

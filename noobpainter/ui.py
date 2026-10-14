@@ -34,6 +34,8 @@ NOTES = {"relief_wood": "carved in Blender", "relief_marble": "carved in Blender
          "relief_clay": "moulded in Blender", "anim_van_gogh": "takes a picture or a clip",
          "anim_oil_morph": "takes a picture or a clip"}
 
+PICTURES = {".png", ".jpg", ".jpeg", ".webp"}
+MAX_PICTURES = 8                 # Oil paint (moving): a pose each
 AUDIO = {".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".flac", ".opus"}
 
 _job: dict = {}
@@ -129,7 +131,7 @@ def _run(job: dict) -> None:
                             {"painting": {"seconds": job["seconds"], "playback": job["playback"],
                                           "music": job["music"], "shorts": False},
                              "handplay": {"hand_overlay": job["hand"]}},
-                            picture=job.get("picture"), video=job.get("video"))
+                            picture=job.get("picture"), video=job.get("video"), pictures=job.get("pictures"))
         job.update(status="done", video=str(res["video"]) if res.get("video") else None,
                    image=str(res["image"]) if res.get("image") else None, title=res.get("title", ""),
                    description=res.get("description", ""))
@@ -226,9 +228,14 @@ class Handler(BaseHTTPRequestHandler):
             if style not in brushwork.STYLES and style not in ("anim_van_gogh", "anim_oil_morph",
                                                                 "comic_halftone", "bizarre_manga"):
                 return self._json(400, {"error": f"unknown style {style!r}"})
-            upload = UPLOADS / Path(str(b.get("file", ""))).name if b.get("file") else None
-            if upload and not upload.exists():
+            # one file, or several pictures (Oil paint (moving) uses them all as its poses)
+            names = [str(n) for n in (b.get("files") or ([b["file"]] if b.get("file") else []))][:MAX_PICTURES]
+            files = [UPLOADS / Path(n).name for n in names]
+            if any(not f.exists() for f in files):
                 return self._json(400, {"error": "upload the file again"})
+            if len(files) > 1 and any(f.suffix.lower() not in PICTURES for f in files):
+                return self._json(400, {"error": "several files must all be pictures: a video goes on its own"})
+            upload = files[0] if files else None
             idea = str(b.get("idea", "")).strip()[:300]
             if not upload and not idea:
                 return self._json(400, {"error": "choose a picture or describe an idea"})
@@ -255,7 +262,8 @@ class Handler(BaseHTTPRequestHandler):
             _job.update(status="running", style=style, idea=idea or "a picture", out=out,
                         seconds=max(10.0, min(90.0, float(b.get("seconds", 30)))), hand=bool(b.get("hand")),
                         playback=playback, music=music,
-                        picture=None if is_video else upload, video=upload if is_video else None)
+                        picture=None if is_video else upload, video=upload if is_video else None,
+                        pictures=None if is_video else files)
             threading.Thread(target=_run, args=(_job,), daemon=True).start()
             return self._json(200, {"ok": True})
         self._json(404, {"error": "not found"})
@@ -308,6 +316,9 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}h1{margin:0 0 4px;fon
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:var(--muted)}.drop.over{border-color:var(--accent);color:var(--ink)}
 .drop img,.drop video{max-width:100%;max-height:220px;border-radius:8px;display:block;margin:0 auto 8px}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:6px}.thumbs figure{margin:0;width:74px;position:relative}
+.thumbs img{width:74px;height:110px;object-fit:cover;margin:0 0 3px}.thumbs figcaption{position:absolute;top:3px;left:3px;background:var(--accent);color:var(--accent-ink);border-radius:9px;font-size:11px;padding:0 6px}
+.thumbs span{display:flex;justify-content:space-between}.thumbs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;width:22px;height:22px;padding:0;font:inherit;line-height:1;cursor:pointer}.thumbs button:disabled{opacity:.35;cursor:default}
 label{display:block;margin:14px 0 6px;font-weight:600}input[type=text],input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.row label{margin:0;font-weight:500}
 .styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;max-height:430px;overflow:auto;padding:2px}
@@ -326,11 +337,12 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 <div class="grid">
  <section class="panel">
   <h2>1 · Picture</h2>
-  <div class="drop" id="drop"><div id="dropview">Drop a picture or a short video here, or click to choose</div></div>
-  <input type="file" id="file" accept="image/*,video/*" hidden>
+  <div class="drop" id="drop"><div id="dropview">Drop pictures or a short video here, or click to choose</div></div>
+  <input type="file" id="file" accept="image/*,video/*" multiple hidden>
   <label for="idea">Or describe an idea</label>
   <input type="text" id="idea" placeholder="e.g. a lighthouse on a cliff in a storm">
   <div class="model" id="model"></div>
+  <p class="muted" id="manynote"></p>
   <h2 style="margin-top:20px">2 · Style</h2>
   <div class="styles" id="styles"></div>
   <h2 style="margin-top:20px">3 · What to make</h2>
@@ -357,7 +369,7 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
  </section>
 </div></main>
 <script>
-const $=s=>document.querySelector(s);let upload=null,style='contemporary',lastPreview=0;
+const $=s=>document.querySelector(s);let uploads=[],style='contemporary',lastPreview=0;
 const NAMES={anim_van_gogh:'Van Gogh (moving)',anim_oil_morph:'Oil paint (moving)',bw_exaggerated:'B&W exaggerated',compass_spiral:'Compass spiral',relief_wood:'Relief: wood',relief_marble:'Relief: marble',relief_clay:'Relief: clay',old_master:'Old Master',van_gogh:'Van Gogh',bizarre_manga:'Bizarre manga',comic_halftone:'Comic halftone'};
 let styleRows=[];const pictureOnly=()=>document.querySelector('input[name=make]:checked').value==='picture';
 // "just the picture" has no video options, and the moving and ink styles are videos by nature
@@ -368,7 +380,10 @@ function syncMake(){const p=pictureOnly(),row=styleRows.find(r=>r.name===style);
  // not every style has a hand: the compass draws alone, the moving and halftone styles have none
  const tool=row?row.hand:'the brush';$('#hand').disabled=!tool;if(!tool)$('#hand').checked=false;
  $('#handlabel').style.opacity=tool?'':'.5';$('#handtool').textContent=tool||'a tool';
- $('#handnote').textContent=tool?'':`${nice(style)} has no hand to show.`;}
+ $('#handnote').textContent=tool?'':`${nice(style)} has no hand to show.`;
+ const many=uploads.length>1&&uploads[0].kind!=='video';
+ $('#manynote').textContent=!many?'':style==='anim_oil_morph'?`Your ${uploads.length} pictures are the poses, in order: each smears into the next, and the last back into the first.`:
+  `${nice(style)} paints the first picture. Oil paint (moving) uses them all, as poses.`;}
 document.querySelectorAll('input[name=make]').forEach(r=>r.onchange=syncMake);
 let ownMusic=null,musicLib=false;
 const musicChoice=()=>document.querySelector('input[name=music]:checked').value;
@@ -394,19 +409,33 @@ async function loadStyles(){const r=await fetch('/api/styles');const j=await r.j
 $('#styles').addEventListener('mouseover',e=>{const i=e.target.closest('.card')?.querySelector('img');if(i&&i.dataset.play&&i.src.indexOf('.gif')<0)i.src=i.dataset.play;});
 $('#styles').addEventListener('mouseout',e=>{const c=e.target.closest('.card');if(!c||c.contains(e.relatedTarget))return;const i=c.querySelector('img');if(i&&i.dataset.still)i.src=i.dataset.still;});
 $('#styles').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;style=c.dataset.style;document.querySelectorAll('.card').forEach(x=>x.classList.toggle('on',x===c));syncMake();});
-const drop=$('#drop');drop.onclick=()=>$('#file').click();
+const drop=$('#drop');drop.onclick=e=>{if(!e.target.closest('.thumbs button'))$('#file').click();};
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])send(e.dataTransfer.files[0]);};
-$('#file').onchange=e=>{if(e.target.files[0])send(e.target.files[0]);};
-async function send(f){$('#formerr').textContent='';$('#dropview').textContent='Uploading…';
- const r=await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();
- if(!r.ok){$('#dropview').textContent='Drop a picture or a short video here, or click to choose';$('#formerr').textContent=j.error;return;}
- if(j.kind==='audio'){$('#dropview').textContent='Drop a picture or a short video here, or click to choose';$('#formerr').textContent='That\'s music: add it under Music, below.';return;}
- upload=j;const url=URL.createObjectURL(f);
- $('#dropview').innerHTML=(j.kind==='video'?`<video src="${url}" muted autoplay loop playsinline></video>`:`<img src="${url}" alt="">`)+`<small>${f.name}</small>`;
- if(j.kind==='video'&&!style.startsWith('anim_')){style='anim_van_gogh';document.querySelector('input[name=make][value=video]').checked=true;loadStyles();}}
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');send([...e.dataTransfer.files]);};
+$('#file').onchange=e=>{send([...e.target.files]);e.target.value='';};
+// several pictures (Oil paint (moving) makes them its poses, in this order), or one video
+const EMPTY='Drop pictures or a short video here, or click to choose';
+function showUploads(){const el=$('#dropview');if(!uploads.length){el.textContent=EMPTY;syncMake();return;}
+ if(uploads[0].kind==='video'){el.innerHTML=`<video src="${uploads[0].url}" muted autoplay loop playsinline></video><small>${uploads[0].name}</small>`;syncMake();return;}
+ const one=uploads.length===1;
+ el.innerHTML=(one?`<img src="${uploads[0].url}" alt="">`:'')+`<div class="thumbs">`+(one?'':uploads.map((u,i)=>`<figure><img src="${u.url}" alt=""><figcaption>${i+1}</figcaption><span>`+
+  `<button type="button" data-move="${i}" data-by="-1" title="Earlier"${i?'':' disabled'}>‹</button><button type="button" data-drop="${i}" title="Remove">×</button>`+
+  `<button type="button" data-move="${i}" data-by="1" title="Later"${i<uploads.length-1?'':' disabled'}>›</button></span></figure>`).join(''))+
+  `</div><small>${one?uploads[0].name:uploads.length+' pictures'} · click or drop to add more</small>`;syncMake();}
+drop.addEventListener('click',e=>{const b=e.target.closest('.thumbs button');if(!b)return;e.stopPropagation();
+ if(b.dataset.drop!==undefined)uploads.splice(+b.dataset.drop,1);
+ else{const i=+b.dataset.move,j=i+(+b.dataset.by);[uploads[i],uploads[j]]=[uploads[j],uploads[i]];}showUploads();});
+async function send(files){if(!files.length)return;$('#formerr').textContent='';$('#dropview').textContent='Uploading…';
+ for(const f of files){const r=await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();
+  if(!r.ok){$('#formerr').textContent=j.error;continue;}
+  if(j.kind==='audio'){$('#formerr').textContent='That\'s music: add it under Music, below.';continue;}
+  const u={file:j.file,kind:j.kind,name:f.name.replace(/[<>&"]/g,''),url:URL.createObjectURL(f)};
+  if(u.kind==='video'||(uploads[0]&&uploads[0].kind==='video'))uploads=[u];      // a video goes on its own
+  else if(uploads.length<8)uploads.push(u);else $('#formerr').textContent='8 pictures at most';}
+ showUploads();
+ if(uploads[0]&&uploads[0].kind==='video'&&!style.startsWith('anim_')){style='anim_van_gogh';document.querySelector('input[name=make][value=video]').checked=true;loadStyles();}}
 $('#go').onclick=async()=>{$('#formerr').textContent='';
- const body={style,idea:$('#idea').value,file:upload&&upload.file,seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
+ const body={style,idea:$('#idea').value,files:uploads.map(u=>u.file),seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
  const r=await fetch('/api/paint',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
  if(!r.ok){$('#formerr').textContent=j.error;return;}$('#result').innerHTML='';poll();};
 async function poll(){const r=await fetch('/api/job');const j=await r.json();

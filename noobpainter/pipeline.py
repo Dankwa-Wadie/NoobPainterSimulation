@@ -113,14 +113,18 @@ def describe(idea: str, style: str, music: Path | None) -> str:
 
 
 def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | None = None,
-         picture: Path | str | None = None, video: Path | str | None = None) -> dict[str, Any]:
+         picture: Path | str | None = None, video: Path | str | None = None,
+         pictures: list[Path | str] | None = None) -> dict[str, Any]:
     """Paint one picture (`picture`, or drawn from `idea`) in `style` into `out_dir`.
+    `pictures`: several, for anim_oil_morph's poses (the other styles paint the first).
     Returns {"video", "painting", "title", "description"}; with painting.playback off,
     {"image", "title"}: the finished picture only, no video."""
     import brushwork
     import handplay
     import progress
     config = config or {}
+    pictures = [Path(p) for p in (pictures or [])]
+    picture = picture or (pictures[0] if pictures else None)
     out = Path(out_dir).resolve()
     out.mkdir(parents=True, exist_ok=True)
     playback = bool(settings(config)["playback"])
@@ -132,7 +136,7 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
         import paintanim
         kind = style.removeprefix("anim_") if style.startswith("anim_") else "van_gogh"
         res = paintanim.make(idea, kind, config, "", out, Path(picture) if picture else None,
-                             Path(video) if video else None)
+                             Path(video) if video else None, reference_images=pictures or None)
         return {**res, "image": last_frame(Path(res["video"]), out / "painting.png")}
     cfg = settings(config)
     seed = int(hashlib.sha1(f"{idea}|{style}".encode()).hexdigest()[:8], 16)
