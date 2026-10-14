@@ -10,3 +10,6 @@ assets/music/classical/*
 
 # this computer's own choices, saved by the app (e.g. where Blender is)
 settings.json
+
+# launch videos and their working files (the finished videos live on the Releases page)
+brag-output/
