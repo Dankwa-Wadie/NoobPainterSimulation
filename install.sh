@@ -35,11 +35,58 @@ elif [ "$OS" = "Linux" ]; then
   if have apt-get; then
     sudo apt-get update -y < /dev/null && sudo apt-get install -y git python3 python3-venv python3-pip ffmpeg build-essential curl < /dev/null
   elif have dnf; then
-    sudo dnf install -y git python3 python3-pip ffmpeg gcc gcc-c++ make curl < /dev/null
+    sudo dnf install -y git python3 python3-pip gcc gcc-c++ make curl < /dev/null
+    # Fedora's own ffmpeg ("ffmpeg-free") can't make H.264 video; the full one is in RPM Fusion
+    if ! sudo dnf install -y ffmpeg < /dev/null 2>/dev/null; then
+      if ! dnf repolist 2>/dev/null | grep -qi rpmfusion-free && (: < /dev/tty) 2>/dev/null; then
+        printf '\nThe videos need the full ffmpeg, which Fedora keeps in RPM Fusion (a widely used\n'
+        printf 'extra package source). Add RPM Fusion "free" and install ffmpeg from it? [Y/n] '
+        read -r answer < /dev/tty || answer=n
+        case "$answer" in
+          [nN]*) ;;
+          *) sudo dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" < /dev/null ;;
+        esac
+      fi
+      sudo dnf install -y --allowerasing ffmpeg < /dev/null || sudo dnf install -y ffmpeg-free < /dev/null || true
+    fi
+  elif have pacman; then
+    sudo pacman -Sy --needed --noconfirm git python ffmpeg base-devel curl < /dev/null
+  elif have zypper; then
+    sudo zypper --non-interactive install git python3 python3-pip gcc gcc-c++ make curl < /dev/null
+    sudo zypper --non-interactive install ffmpeg < /dev/null || sudo zypper --non-interactive install ffmpeg-7 < /dev/null || true
   else
     echo "Please install git, Python 3.10+, ffmpeg and a C compiler, then run this again." >&2; exit 1
   fi
   PYTHON=python3
+  # every video is H.264; some distributions' ffmpeg leaves that encoder out
+  if ! have ffmpeg || ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264; then
+    echo >&2
+    echo "ffmpeg is missing, or can't make H.264 video (libx264), which every video here uses." >&2
+    if have dnf; then
+      echo "On Fedora, add RPM Fusion and swap in the full ffmpeg:" >&2
+      echo "  sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-\$(rpm -E %fedora).noarch.rpm" >&2
+      echo "  sudo dnf swap ffmpeg-free ffmpeg --allowerasing" >&2
+    elif have zypper; then
+      echo "On openSUSE, add the Packman repository and install its ffmpeg:" >&2
+      echo "  https://en.opensuse.org/Additional_package_repositories#Packman" >&2
+    else
+      echo "Install your distribution's full ffmpeg package." >&2
+    fi
+    echo "Then run this installer again." >&2
+    exit 1
+  fi
+  # older releases (Ubuntu 20.04, Debian 11) ship a Python that's too old; use a newer one if present
+  if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null; then
+    for v in 3.13 3.12 3.11 3.10; do
+      if have "python$v"; then PYTHON="python$v"; break; fi
+    done
+    if [ "$PYTHON" = python3 ]; then
+      echo "This needs Python 3.10 or newer; this system has $(python3 --version 2>&1)." >&2
+      echo "Install a newer Python (on Ubuntu: sudo apt install python3.12 python3.12-venv)," >&2
+      echo "or use a newer release of your distribution, then run this again." >&2
+      exit 1
+    fi
+  fi
 else
   echo "This installer supports macOS and Linux. On Windows, use WSL (Ubuntu) and run it there." >&2; exit 1
 fi
@@ -101,18 +148,26 @@ if [ "$choice" = "ask" ] && [ -f "${NOOBPAINTER_COMFY_HOME:-$HOME/ComfyUI-Instal
 fi
 if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then
   printf '\nInstall the local image model too? It lets you paint from a typed idea\n'
-  printf 'instead of a picture. About 20 GB to download. You can also do it later from the app. [y/N] '
+  printf 'instead of a picture. About 20 GB to download. You can also do it later from the app.\n'
+  # it runs on Apple Silicon or an NVIDIA GPU; anywhere else it falls back to the CPU
+  if [ "$OS" = "Linux" ] && ! have nvidia-smi; then
+    printf 'No NVIDIA graphics card was found, so it would run on the processor: one picture\n'
+    printf 'could take a very long time. Most people without one should say no.\n'
+  fi
+  printf '[y/N] '
   read -r answer < /dev/tty || answer=n
   case "$answer" in [yY]*) choice=yes ;; *) choice=no ;; esac
 fi
 if [ "$choice" = "yes" ]; then
   say "Installing the local image model (about 20 GB)"
-  bash tools/install_image_model.sh
+  PYTHON="$PYTHON" bash tools/install_image_model.sh
 fi
 
-if [ "$OS" = "Darwin" ] && [ ! -d /Applications/Blender.app ]; then
+# the carving styles need Blender; the app can also install it, under Extras
+if { [ "$OS" = "Darwin" ] && [ ! -d /Applications/Blender.app ]; } || { [ "$OS" = "Linux" ] && ! have blender; }; then
   echo
-  echo "Optional: the carving styles need Blender (free): https://www.blender.org/download/"
+  echo "Optional: the carving styles need Blender (free). The app can install it for you,"
+  echo "under Extras, or get it from https://www.blender.org/download/"
 fi
 
 say "Adding NoobPainterSimulation to your desktop"

@@ -131,7 +131,10 @@ It does everything, so you don't need to clone the repo yourself:
 - opens the app.
 
 Run the same line again to update: it keeps what you've already downloaded (the music,
-the image model) and doesn't ask for it again. Works on macOS (Apple Silicon or Intel) and Linux.
+the image model) and doesn't ask for it again. Works on macOS (Apple Silicon or Intel) and Linux
+(Ubuntu and Debian, Fedora, Arch, openSUSE). On Fedora it offers to add RPM Fusion, and on
+openSUSE it asks for Packman, because their own ffmpeg can't make the H.264 video the app uses.
+The local image model needs Apple Silicon or an NVIDIA graphics card to be quick.
 
 **On Windows**, open PowerShell (Start menu, type *PowerShell*) and paste:
 

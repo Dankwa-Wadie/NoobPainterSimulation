@@ -29,7 +29,7 @@ fi
 
 step 2 "its Python environment"
 if [ ! -x "$PY" ]; then
-  python3 -m venv "$HOME_DIR/standalone-env"
+  "${PYTHON:-python3}" -m venv "$HOME_DIR/standalone-env"
 fi
 "$PY" -m pip install -q --upgrade pip
 "$PY" -m pip install -q -r "$COMFY/requirements.txt"
