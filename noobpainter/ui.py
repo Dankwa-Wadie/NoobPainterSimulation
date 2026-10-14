@@ -94,6 +94,28 @@ def _install_model() -> None:
 
 
 _blender: dict = {"checked": None}
+_blinstall: dict = {"status": "idle", "log": []}
+
+
+def _install_blender() -> None:
+    """The Install Blender button: blendersetup.install, its lines shown on the page."""
+    import blendersetup
+    _blinstall.update(status="running", log=[])
+
+    def say(line: str) -> None:
+        log = _blinstall["log"]
+        if log and line.startswith("Downloading") and log[-1].startswith("Downloading"):
+            log[-1] = line                       # one progress line that updates, not hundreds
+        else:
+            log.append(line)
+        _blinstall["log"] = log[-12:]
+    try:
+        blendersetup.install(say)
+        _blinstall["status"] = "done"
+    except Exception as e:                        # noqa: BLE001 - shown on the page
+        say(f"Stopped: {e}")
+        _blinstall["status"] = "failed"
+        traceback.print_exc()
 
 
 def blender_state(path: str | None = None) -> dict:
@@ -102,8 +124,14 @@ def blender_state(path: str | None = None) -> dict:
     import carving
     found = carving.find_blender()
     version = carving.blender_version(found) if found else None
+    import blendersetup
+    try:
+        offer = blendersetup.asset()
+    except RuntimeError:
+        offer = ""                                # no official build for this computer
     return {"found": bool(version), "path": str(found) if found else "", "version": version or "",
-            "saved": bool(carving._saved().get("blender"))}
+            "saved": bool(carving._saved().get("blender")), "install": _blinstall.get("status"),
+            "log": _blinstall.get("log", [])[-8:], "offer": f"Blender {blendersetup.VERSION}" if offer else ""}
 
 
 def connect_blender(path: str) -> dict:
@@ -254,6 +282,10 @@ class Handler(BaseHTTPRequestHandler):
                 b = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
                 return self._json(400, {"error": "bad request"})
+            if b.get("install"):
+                if _blinstall.get("status") != "running":
+                    threading.Thread(target=_install_blender, daemon=True).start()
+                return self._json(200, {"ok": True})
             if b.get("forget"):
                 import carving
                 carving.save_blender(None)
@@ -409,7 +441,6 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
   <p class="muted" id="manynote"></p>
   <h2 style="margin-top:20px">2 · Style</h2>
   <div class="styles" id="styles"></div>
-  <div class="model" id="blender" style="display:none"></div>
   <h2 style="margin-top:20px">3 · What to make</h2>
   <div class="row" id="make"><label><input type="radio" name="make" value="video" checked> The painting video <span class="muted">(watch it painted, stroke by stroke)</span></label>
    <label><input type="radio" name="make" value="picture"> Just the finished picture <span class="muted">(faster)</span></label></div>
@@ -423,6 +454,8 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
     <label><input type="radio" name="music" value="own" id="mown"> My own music</label></div>
    <div class="model" id="musicnote"></div>
    <input type="file" id="musicfile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" hidden></div>
+  <h2 style="margin-top:20px">Extras</h2>
+  <div class="model" id="blender" style="margin-top:0"><b>Blender</b> · for the carving styles</div>
   <button class="go" id="go">Paint it</button><p class="err" id="formerr"></p>
  </section>
  <section class="panel">
@@ -454,7 +487,7 @@ function syncMake(){const p=pictureOnly(),row=styleRows.find(r=>r.name===style);
   uploads.length>1&&multi?`Your ${uploads.length} pictures are the poses, in order: each smears into the next, and the last back into the first.`:
   uploads.length>1?`${nice(style)} paints one picture: picture 1. Only Oil paint (moving) uses several.`:'';
  document.querySelectorAll('.thumbs figure').forEach((f,i)=>f.classList.toggle('unused',i>0&&!multi));
- $('#blender').style.display=row&&row.blender?'':'none';if(row&&row.blender&&!blenderInfo)blender();}
+ if(row&&row.blender&&blenderInfo&&!blenderInfo.found)$('#manynote').innerHTML=`<span class="err">${nice(style)} needs Blender: install or connect it under Extras, below.</span>`;}
 const dropText=()=>{const row=styleRows.find(r=>r.name===style)||{};
  return row.multi?'Drop pictures here (up to 8, in order), or a short clip, or click to choose':
   row.clip?'Drop a picture or a short clip here, or click to choose':'Drop a picture here, or click to choose';};
@@ -533,17 +566,24 @@ async function model(){const r=await fetch('/api/model');const m=await r.json();
   `To paint from a typed idea, this computer needs a local image model (Qwen-Image, about 20 GB, free).<button type="button" id="getmodel">Install it</button> <a href="https://github.com/Dankwa-Wadie/NoobPainterSimulation#the-local-image-model-optional" target="_blank" rel="noopener">What is this?</a>`;}
 // Blender, for the carving styles: found in the usual places, or pointed at; looked for afresh
 let blenderInfo=null;
-async function blender(how){const el=$('#blender');el.innerHTML='Looking for Blender…';
- const r=await fetch('/api/blender',how?{method:'POST',body:JSON.stringify(how)}:undefined);const b=await r.json();blenderInfo=b;
- const esc=t=>String(t||'').replace(/[<>&"]/g,'');
- if(b.found){el.innerHTML=`✓ ${esc(b.version)} connected <span class="muted">(${esc(b.path)})</span> <button type="button" data-blend="look">Look again</button>`+
+// Blender, for the carving styles: install it here, or connect one you already have
+async function blender(how){const el=$('#blender');
+ const r=await fetch('/api/blender',how?{method:'POST',body:JSON.stringify(how)}:undefined);const b=await r.json();
+ if(how&&how.install){setTimeout(blender,1000);return;}
+ const had=blenderInfo&&blenderInfo.found;blenderInfo=b;
+ const esc=t=>String(t||'').replace(/[<>&"]/g,'');const head='<b>Blender</b> · for the carving styles<br>';
+ if(b.install==='running'){el.innerHTML=head+`Installing ${esc(b.offer)} (about 300 MB to download, 1 GB unpacked)…<pre>${esc((b.log||[]).join('\n'))}</pre>`;setTimeout(blender,2000);return;}
+ if(b.found){el.innerHTML=head+`✓ ${esc(b.version)} connected <span class="muted">(${esc(b.path)})</span> <button type="button" data-blend="look">Look again</button>`+
   (b.saved?` <button type="button" data-blend="forget">Forget this location</button>`:'');}
- else el.innerHTML=(b.error?`<span class="err">${esc(b.error)}</span><br>`:'')+
-  `The carving styles render in Blender (free), which isn't connected yet. <a href="https://www.blender.org/download/" target="_blank" rel="noopener">Download Blender</a>, install it, then <button type="button" data-blend="look">Look again</button>`+
-  `<div class="blendpath"><input type="text" id="blendpath" placeholder="Or paste where Blender is, e.g. C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe"><button type="button" data-blend="set">Connect</button></div>`;
- loadStyles();}
+ else el.innerHTML=head+(b.error?`<span class="err">${esc(b.error)}</span><br>`:'')+
+  (b.install==='failed'?`<span class="err">The install stopped.</span><pre>${esc((b.log||[]).join('\n'))}</pre>`:'')+
+  (b.offer?`Not installed yet. <button type="button" data-blend="install">${b.install==='failed'?'Try again':'Install '+esc(b.offer)}</button> <span class="muted">(free, from blender.org; about 300 MB)</span><br>`:
+   `Not installed yet: <a href="https://www.blender.org/download/" target="_blank" rel="noopener">get it from blender.org</a>.<br>`)+
+  `Already have Blender? <button type="button" data-blend="look">Find it</button> or paste where it is:`+
+  `<div class="blendpath"><input type="text" id="blendpath" placeholder="e.g. C:\\Program Files\\Blender Foundation\\Blender 4.5\\blender.exe, or /Applications/Blender.app"><button type="button" data-blend="set">Connect</button></div>`;
+ if(had!==b.found||!had)loadStyles();}
 document.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.blend;if(!k)return;e.target.disabled=true;
- blender(k==='set'?{path:$('#blendpath').value}:k==='forget'?{forget:true}:{look:true});});
+ blender(k==='set'?{path:$('#blendpath').value}:k==='forget'?{forget:true}:k==='install'?{install:true}:{look:true});});
 document.addEventListener('click',async e=>{if(e.target.id!=='getmodel')return;e.target.disabled=true;
  const r=await fetch('/api/model/install',{method:'POST',body:'{}'});if(r.ok)model();});
 loadStyles();poll();model();music();blender();

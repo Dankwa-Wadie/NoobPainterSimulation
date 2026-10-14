@@ -15,6 +15,7 @@ import ssl
 import time
 import urllib.request
 from pathlib import Path
+from typing import Callable
 
 LOG = logging.getLogger("noobpainter.downloads")
 
@@ -40,10 +41,11 @@ def _left(secs: float) -> str:
     return f"about {secs / 60:.0f} minutes left"
 
 
-def fetch(url: str, dest: Path, label: str) -> Path:
+def fetch(url: str, dest: Path, label: str, say: Callable[[str], None] | None = None) -> Path:
     """`url` to `dest`, unless it is there already, with its progress on the app's bar:
     "Downloading <label>: 567 of 1,020 MB, about 9 minutes left". A stopped download
-    starts again next time (a part file is never mistaken for the whole)."""
+    starts again next time (a part file is never mistaken for the whole). `say`, if
+    given, gets the same progress lines (the app's Blender install shows them)."""
     import progress
     if dest.exists() and dest.stat().st_size > 0:
         return dest
@@ -75,7 +77,10 @@ def fetch(url: str, dest: Path, label: str) -> Path:
                                   + _left((total - done) / max(1.0, rate)))
                         progress.fraction(done / total, detail)
                     else:
-                        progress._set(detail=f"Downloading {label} (needed once): {_mb(done)}")
+                        detail = f"Downloading {label} (needed once): {_mb(done)}"
+                        progress._set(detail=detail)
+                    if say:
+                        say(detail)
         if total and done < total:
             raise OSError(f"the download of {label} stopped at {_mb(done)} of {_mb(total)}")
         shutil.move(str(part), str(dest))

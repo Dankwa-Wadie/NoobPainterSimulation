@@ -177,12 +177,17 @@ or more. About 3 minutes a picture on an Apple Silicon Mac. Files and sources:
 ### Optional: Blender
 
 The carving styles (`relief_wood`, `relief_marble`, `relief_clay`) render in
-[Blender](https://www.blender.org/download/) (free). You can install it any time, even
-after this project: the app looks for it in the usual places each time (Applications on
-macOS, Program Files on Windows, the system path on Linux). Choose a carving style and the
-app shows whether Blender is connected; press **Look again** after installing it, or paste
-where it is and press **Connect**. The location is remembered in `settings.json`. From the
-command line, `NOOBPAINTER_BLENDER` points at it too.
+[Blender](https://www.blender.org/) (free). Everything for it is in the app, under **Extras**:
+
+- **Install it:** press **Install Blender**. The app downloads the official build from
+  blender.org (about 300 MB), checks it against blender.org's checksum, unpacks it into
+  your own folders (no administrator needed) and connects it. Progress shows on the page.
+- **Already have Blender?** The app looks in the usual places (Applications on macOS,
+  Program Files on Windows, the system path on Linux). If it isn't found, press **Find it**
+  after installing, or paste where it is and press **Connect**. The location is remembered
+  in `settings.json`.
+
+From the command line, `NOOBPAINTER_BLENDER` points at it too.
 
 ### By hand (if you prefer)
 
