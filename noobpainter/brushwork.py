@@ -892,6 +892,8 @@ def subject_mask(ref: np.ndarray) -> np.ndarray:
     """Where the subject is (bool, same size as ref): rembg's mask, or a centre oval."""
     h, w = ref.shape[:2]
     try:
+        import downloads
+        downloads.rembg_model()                     # once, with its progress in the app
         from rembg import remove
         m = remove(Image.fromarray((ref * 255).astype(np.uint8)), only_mask=True)
         mask = np.asarray(m.convert("L").filter(ImageFilter.MaxFilter(9)), dtype=np.float64) > 127

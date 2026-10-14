@@ -50,6 +50,8 @@ BLUE = np.array([110, 160, 230], np.float32)       # RGB of the rough pencil
 def subject_mask(rgb: np.ndarray) -> np.ndarray | None:
     try:
         from PIL import Image
+        import downloads
+        downloads.rembg_model()                      # once, with its progress in the app
         from rembg import remove
         return np.asarray(remove(Image.fromarray(rgb), only_mask=True).convert("L")) > 127
     except Exception:                                # noqa: BLE001

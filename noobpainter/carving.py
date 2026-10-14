@@ -112,15 +112,13 @@ MOULD_TOOLS = [("lumps", 22.0, 0.10, 700, 0.010), ("pellets", 11.0, 0.045, 1300,
 
 def depth(picture: Path) -> np.ndarray:
     """Relative depth 0 (far) .. 1 (near), at the picture's size."""
-    import os
     import torch
-    cache = Path.home() / ".cache" / "huggingface" / "hub" / ("models--" + DEPTH_MODEL.replace("/", "--"))
-    if cache.exists():                               # downloaded once: no network after
-        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    import downloads
+    model = downloads.depth_model()                  # once, with its progress in the app
     logging.getLogger("httpx").setLevel(logging.WARNING)
     from transformers import pipeline
     device = "mps" if torch.backends.mps.is_available() else "cpu"
-    pipe = pipeline("depth-estimation", model=DEPTH_MODEL, device=device)
+    pipe = pipeline("depth-estimation", model=model, device=device)
     img = Image.open(picture).convert("RGB")
     d = np.asarray(pipe(img)["predicted_depth"].squeeze().cpu(), dtype=np.float64)
     d = (d - d.min()) / max(1e-9, d.max() - d.min())

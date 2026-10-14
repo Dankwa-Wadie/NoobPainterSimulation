@@ -23,6 +23,7 @@ import brushwork
 import progress
 
 ROOT = Path(__file__).resolve().parent.parent
+BRAND = ROOT / "assets" / "brand"
 OUT = ROOT / "out" / "ui"
 UPLOADS = OUT / "uploads"
 PREVIEWS = ROOT / "docs" / "media" / "styles"
@@ -224,6 +225,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(PREVIEWS / urllib.parse.unquote(url.path[len("/previews/"):]), PREVIEWS)
         if url.path.startswith("/out/"):
             return self._file(OUT / urllib.parse.unquote(url.path[len("/out/"):]), OUT)
+        if url.path in ("/favicon.ico", "/brand/app.ico"):
+            return self._file(BRAND / "app.ico", BRAND)
+        if url.path.startswith("/brand/"):
+            return self._file(BRAND / urllib.parse.unquote(url.path[len("/brand/"):]), BRAND)
         self._json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -363,6 +368,8 @@ def serve(port: int = 8770, open_browser: bool = True) -> None:
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NoobPainterSimulation</title>
+<link rel="icon" type="image/png" href="/brand/app.png">
+<link rel="alternate icon" href="/favicon.ico">
 <style>
 :root{--bg:#f6f3ee;--panel:#fff;--ink:#1f1c18;--muted:#6f675d;--line:#e3ddd3;--accent:#b5562f;--accent-ink:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#16140f;--panel:#201d17;--ink:#efe9df;--muted:#a59b8c;--line:#353027;--accent:#e07a4f;--accent-ink:#16140f}}
@@ -511,7 +518,7 @@ $('#go').onclick=async()=>{$('#formerr').textContent='';
  if(!r.ok){$('#formerr').textContent=j.error;return;}$('#result').innerHTML='';poll();};
 async function poll(){const r=await fetch('/api/job');const j=await r.json();
  const st=j.status;$('#go').disabled=st==='running';
- $('#stage').textContent=st==='running'?({reference:'Preparing the picture',plan:'Planning the strokes',paint:'Painting',assemble:'Cutting the video'}[j.stage]||'Working'):st==='done'?'Done':st==='failed'?'Something went wrong':'Waiting for a picture';
+ $('#stage').textContent=st==='running'?({reference:'Preparing the picture',download:'Downloading (needed once)',plan:'Planning the strokes',paint:'Painting',assemble:'Cutting the video'}[j.stage]||'Working'):st==='done'?'Done':st==='failed'?'Something went wrong':'Waiting for a picture';
  $('#pct').textContent=st?Math.floor(j.percent||0)+'%':'';$('#bar').style.width=(j.percent||0)+'%';$('#detail').textContent=j.error||j.detail||'';
  $('#log').textContent=(j.log||[]).join('\n');
  if(j.preview&&j.preview_at!==lastPreview&&st==='running'){lastPreview=j.preview_at;$('#live').innerHTML=`<img src="${j.preview}?t=${lastPreview}" alt="The canvas so far">`;}
