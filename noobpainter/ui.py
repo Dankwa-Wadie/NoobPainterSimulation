@@ -191,10 +191,33 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
 
+def already_running(url: str) -> bool:
+    """Whether this app (not some other program) is the one answering at url."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(url, timeout=2) as r:
+            return b"<title>NoobPainterSimulation</title>" in r.read(4096)
+    except OSError:
+        return False
+
+
+class Server(ThreadingHTTPServer):
+    # On Windows SO_REUSEADDR lets a second server bind a port already in use, so a
+    # second launch would start a second app instead of finding the first.
+    allow_reuse_address = os.name != "nt"
+
+
 def serve(port: int = 8770, open_browser: bool = True) -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}"
-    print(f"NoobPainterSimulation is running at {url}  (Ctrl+C to stop)")
+    # The desktop shortcut double-clicked while the app is already open: show that one.
+    if already_running(url):
+        print(f"NoobPainterSimulation is already running at {url}; opening it.")
+        if open_browser:
+            webbrowser.open(url)
+        return
+    server = Server(("127.0.0.1", port), Handler)
+    print(f"NoobPainterSimulation is running at {url}")
+    print("Keep this window open while you use it; close it (or press Ctrl+C) to quit.")
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

@@ -120,8 +120,25 @@ if ($LASTEXITCODE -ne 0) { Write-Host "  (music skipped; videos will be silent u
 Write-Host "`nNot on Windows yet: the one-click local image model (paint from a typed idea)."
 Write-Host "Painting from your own pictures works. Optional: Blender for the carving styles: https://www.blender.org/download/"
 
-Say "All set. To open the app:"
-Write-Host "    cd `"$Dir`"; .venv\Scripts\python -m noobpainter ui`n"
+Say "Adding NoobPainterSimulation to your desktop and Start menu"
+try {
+    $Shell = New-Object -ComObject WScript.Shell
+    # GetFolderPath, not $HOME\Desktop: the desktop is often moved into OneDrive
+    foreach ($Folder in @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("Programs"))) {
+        $Link = $Shell.CreateShortcut((Join-Path $Folder "NoobPainterSimulation.lnk"))
+        $Link.TargetPath = Join-Path $Dir "start.cmd"
+        $Link.WorkingDirectory = $Dir
+        $Link.IconLocation = (Join-Path $Dir "assets\brand\app.ico") + ",0"
+        $Link.Description = "Open NoobPainterSimulation"
+        $Link.Save()
+    }
+} catch {
+    Write-Host "  (couldn't make the shortcut: $_; open start.cmd in $Dir instead)"
+}
+
+Say "All set"
+Write-Host "To open it any time: double-click NoobPainterSimulation on your desktop (or find it in the Start menu)."
+Write-Host "It opens in your browser. Keep the black window open while you paint; close it to quit.`n"
 $go = Read-Host "Open it now? [Y/n]"
 if ($go -notmatch '^[nN]') { & $Py -m noobpainter ui }
 }

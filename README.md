@@ -123,16 +123,23 @@ It does everything, so you don't need to clone the repo yourself:
 - sets up a private Python environment and builds the paint engine (a few minutes the first time);
 - fetches the free classical music;
 - asks whether to install the optional local image model (about 20 GB);
+- puts a **NoobPainterSimulation** launcher on your desktop;
 - opens the app.
 
 Run the same line again to update. Works on macOS (Apple Silicon or Intel) and Linux;
 on Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) (Ubuntu) and run it there.
 
-Afterwards, open the app any time with:
+Afterwards, open the app any time by double-clicking **NoobPainterSimulation** on your
+desktop (on Windows it is in the Start menu too). It opens in your browser; keep the
+terminal window it opens running while you paint, and close it to quit. Double-clicking
+again while it is open just brings the page back. From a terminal, the same thing is:
 
 ```sh
 cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui
 ```
+
+If the desktop launcher goes missing, `start.command` (macOS) and `start.cmd` (Windows)
+in the project folder do the same, or run the installer again to put it back.
 
 ### The local image model (optional)
 

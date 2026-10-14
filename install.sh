@@ -86,8 +86,40 @@ if [ "$OS" = "Darwin" ] && [ ! -d /Applications/Blender.app ]; then
   echo "Optional: the carving styles need Blender (free): https://www.blender.org/download/"
 fi
 
-say "All set. To open the app:"
-echo "    cd \"$DIR\" && .venv/bin/python -m noobpainter ui"
+say "Adding NoobPainterSimulation to your desktop"
+if [ "$OS" = "Darwin" ]; then
+  # a .command opens in Terminal when double-clicked in Finder
+  launcher="$HOME/Desktop/NoobPainterSimulation.command"
+  printf '#!/bin/bash\n# Opens NoobPainterSimulation in your browser. Keep this window open while you use it; close it to quit.\ncd %q && exec .venv/bin/python -m noobpainter ui\n' "$DIR" > "$launcher"
+  chmod +x "$launcher"
+else
+  apps="$HOME/.local/share/applications"
+  mkdir -p "$apps"
+  entry="$apps/noobpainter.desktop"
+  cat > "$entry" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=NoobPainterSimulation
+Comment=Open NoobPainterSimulation in your browser
+Path=$DIR
+Exec="$DIR/.venv/bin/python" -m noobpainter ui
+Icon=$DIR/assets/brand/app.png
+Terminal=true
+Categories=Graphics;
+DESKTOP
+  chmod +x "$entry"
+  desktop="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
+  if [ -d "$desktop" ]; then
+    cp "$entry" "$desktop/NoobPainterSimulation.desktop"
+    chmod +x "$desktop/NoobPainterSimulation.desktop"
+    # GNOME runs a desktop launcher only once it is marked trusted
+    gio set "$desktop/NoobPainterSimulation.desktop" metadata::trusted true 2>/dev/null || true
+  fi
+fi
+
+say "All set"
+echo "To open it any time: double-click NoobPainterSimulation on your desktop."
+echo "It opens in your browser. Keep the terminal window open while you paint; close it to quit."
 echo
 if (: < /dev/tty) 2>/dev/null; then
   printf 'Open it now? [Y/n] '
