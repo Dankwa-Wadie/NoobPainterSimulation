@@ -151,7 +151,7 @@ def calibrate(palette: str = "classic") -> list[dict[str, Any]]:
                   f"{{hand=\"body\", pile={_recipe_lua(recipe)}, coverage=4, fill=true, clip=true}})"]
     with tempfile.TemporaryDirectory() as d:
         lua, png = Path(d) / "swatches.lua", Path(d) / "swatches.png"
-        lua.write_text("\n".join(lines) + "\n")
+        lua.write_text("\n".join(lines) + "\n", encoding="utf-8")
         _run(lua, png, width=1000)
         img = np.asarray(Image.open(png).convert("RGB"), dtype=np.float64) / 255.0
     px = img.shape[1] / 1000
@@ -163,14 +163,14 @@ def calibrate(palette: str = "classic") -> list[dict[str, Any]]:
         rgb = np.median(img[c:d, a:b].reshape(-1, 3), axis=0)
         out.append({"recipe": recipe, "rgb": [round(float(v), 4) for v in rgb]})
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out, indent=0))
+    path.write_text(json.dumps(out, indent=0), encoding="utf-8")
     LOG.info("calibrated %d swatches -> %s", len(out), path)
     return out
 
 
 def swatches(palette: str = "classic") -> list[dict[str, Any]]:
     path = swatch_path(palette)
-    return json.loads(path.read_text()) if path.exists() else calibrate(palette)
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else calibrate(palette)
 
 
 def match(rgb: np.ndarray, table: list[dict[str, Any]]) -> list[tuple[str, float]]:
@@ -327,7 +327,7 @@ def plan(picture: Path, cfg: dict[str, Any], table: list[dict[str, Any]]) -> str
 def chunks_total(lua: Path) -> int:
     """How many chunks of strokes the plan holds: the painting is done after the last."""
     try:
-        return sum(1 for ln in lua.read_text().splitlines() if "chunk" in ln)
+        return sum(1 for ln in lua.read_text(encoding="utf-8").splitlines() if "chunk" in ln)
     except OSError:
         return 0
 
@@ -335,7 +335,7 @@ def chunks_total(lua: Path) -> int:
 def chunks_done(frames: Path) -> int:
     """How many chunks the easel has finished, from the log it writes beside its frames."""
     try:
-        rows = (frames / "frames.tsv").read_text().splitlines()
+        rows = (frames / "frames.tsv").read_text(encoding="utf-8").splitlines()
     except OSError:
         return 0
     for row in reversed(rows[1:]):
@@ -358,12 +358,12 @@ def _run(lua: Path, png: Path, width: int, frames: Path | None = None,
         cmd += ["--frames-every", f"{every:g}", "--frames-dir", str(frames),
                 "--frame-width", str(frame_width)]
     if not (on_progress and frames):
-        res = subprocess.run(cmd, cwd=VENDOR, capture_output=True, text=True, timeout=timeout)
+        res = subprocess.run(cmd, cwd=VENDOR, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
         out, err, code = res.stdout, res.stderr, res.returncode
     else:
         total, end = chunks_total(lua), time.time() + timeout
         proc = subprocess.Popen(cmd, cwd=VENDOR, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True)
+                                text=True, encoding="utf-8", errors="replace")
         import threading
         got: dict[str, str] = {}
         reader = threading.Thread(target=lambda: got.update(zip(("out", "err"), proc.communicate())))
@@ -392,7 +392,7 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     lua = out_dir / "painting.lua"
-    lua.write_text(plan(Path(picture), cfg, swatches()))
+    lua.write_text(plan(Path(picture), cfg, swatches()), encoding="utf-8")
     frames = out_dir / "frames"
     if frames.exists():
         for f in frames.iterdir():
@@ -415,7 +415,7 @@ def playback(frames: Path, out: Path, seconds: float = 20.0, hold: float = 2.0,
     for s in shots:
         body += [f"file '{s.name}'", f"duration {step:.4f}"]
     body += [f"file '{shots[-1].name}'", f"duration {hold:.3f}", f"file '{shots[-1].name}'"]
-    listing.write_text("\n".join(body) + "\n")
+    listing.write_text("\n".join(body) + "\n", encoding="utf-8")
     vf = f"fps={fps},format=yuv420p"
     if size:
         w, h = size

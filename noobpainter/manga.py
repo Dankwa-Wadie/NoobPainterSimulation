@@ -194,7 +194,7 @@ class Hand:
             meta = handplay.HAND.with_name(f"{tool}.json")
             if not meta.exists():
                 continue
-            m = json.loads(meta.read_text())
+            m = json.loads(meta.read_text(encoding="utf-8"))
             img = cv2.imread(str(meta.parent / m["file"]), cv2.IMREAD_UNCHANGED)
             k = W * 0.42 / img.shape[1]
             img = cv2.resize(img, (int(img.shape[1] * k), int(img.shape[0] * k)), interpolation=cv2.INTER_AREA)

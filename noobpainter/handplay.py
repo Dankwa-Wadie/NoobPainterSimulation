@@ -80,7 +80,7 @@ class Shot:
 
 
 def load_frames(frames: Path) -> list[Shot]:
-    rows = (frames / "frames.tsv").read_text().splitlines()[1:]
+    rows = (frames / "frames.tsv").read_text(encoding="utf-8").splitlines()[1:]
     shots = []
     for row in rows:
         name, secs, *_ = row.split("\t")
@@ -350,7 +350,7 @@ def measure_track(path: Path, seconds: float = 50.0) -> dict[str, float]:
     import re
     out = subprocess.run(["ffmpeg", "-v", "info", "-t", f"{seconds:g}", "-i", str(path), "-af",
                           "silencedetect=noise=-45dB:d=0.3,ebur128", "-f", "null", "-"],
-                         capture_output=True, text=True).stderr
+                         capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
     lead = 0.0
     start, end = re.search(r"silence_start: ([\d.]+)", out), re.search(r"silence_end: ([\d.]+)", out)
     if start and float(start.group(1)) < 0.2 and end:
@@ -369,7 +369,7 @@ def pick_music(seconds: float, seed: int = 0) -> Path | None:
     manifest = MUSIC / "manifest.json"
     if not manifest.exists():
         return None
-    rows = json.loads(manifest.read_text())
+    rows = json.loads(manifest.read_text(encoding="utf-8"))
     changed, seen, tracks = False, set(), []
     for m in rows:
         f = MUSIC / m["file"]
@@ -384,7 +384,7 @@ def pick_music(seconds: float, seed: int = 0) -> Path | None:
         if m["lra"] <= CALM_LRA and m.get("voices") == []:
             tracks.append(m)
     if changed:
-        manifest.write_text(json.dumps(rows, indent=1, ensure_ascii=False))
+        manifest.write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding="utf-8")
     if not tracks:
         return None
     return MUSIC / tracks[seed % len(tracks)]["file"]
@@ -406,7 +406,7 @@ def choose_music(seconds: float, seed: int, config: dict[str, Any] | None) -> Pa
 def music_start(path: Path) -> float:
     """Where the music begins (after any leading silence), from the manifest."""
     try:
-        rows = json.loads((MUSIC / "manifest.json").read_text())
+        rows = json.loads((MUSIC / "manifest.json").read_text(encoding="utf-8"))
         return float(next(m.get("lead", 0.0) for m in rows if m["file"] == path.name))
     except (OSError, ValueError, StopIteration):
         return 0.0
@@ -567,7 +567,7 @@ def render(frames: Path, strokes: Path, out: Path, seconds: float = 50.0,
            size: tuple[int, int] = (1080, 1920), music: Path | None = None,
            hand: dict[str, Any] | None = None, config: dict[str, Any] | None = None) -> Path:
     """The playback video, `seconds` long, with the hand and an optional music bed."""
-    record = json.loads(Path(strokes).read_text())
+    record = json.loads(Path(strokes).read_text(encoding="utf-8"))
     # the style's own playback wishes (a pencil drawing: its hand, a gentler zoom)
     words = {}
     if record.get("medium") in ("pencil", "pen", "compass"):   # it's drawn, not painted
@@ -580,7 +580,7 @@ def render(frames: Path, strokes: Path, out: Path, seconds: float = 50.0,
            **((config or {}).get("handplay") or {})}
     which = HAND.with_name(f"{cfg['hand']}.json") if cfg.get("hand") else HAND
     if hand is None and cfg.get("hand_overlay") and which.exists():
-        hand = json.loads(which.read_text())
+        hand = json.loads(which.read_text(encoding="utf-8"))
         hand["file"] = str(which.parent / hand["file"])
     zoom = float(cfg.get("zoom") or 1)
     full = (int(size[0] * zoom) // 2 * 2, int(size[1] * zoom) // 2 * 2)

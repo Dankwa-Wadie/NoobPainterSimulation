@@ -437,12 +437,12 @@ def _finish(idea: str, kind: str, config: dict[str, Any], account: str, workdir:
         desc = (f"Every frame painted afresh, stroke by stroke, by a computer simulation, not a human "
                 f"artist ({kind.replace('_', ' ')} style).")
         if music:
-            manifest = json.loads((handplay.MUSIC / "manifest.json").read_text())
+            manifest = json.loads((handplay.MUSIC / "manifest.json").read_text(encoding="utf-8"))
             m = next((m for m in manifest if m["file"] == music.name), None)
             if m:
                 desc += (f"\n\nMusic: {m['title'].removeprefix('File:').rsplit('.', 1)[0]} "
                          f"({m['licence']}, via Wikimedia Commons / Musopen).")
-        (workdir / "credits.txt").write_text(f"{title}\n\n{desc}\n")
+        (workdir / "credits.txt").write_text(f"{title}\n\n{desc}\n", encoding="utf-8")
         if owns:
             progress.finish(title)
         return {"video": video, "title": title, "description": desc, "workdir": str(workdir)}

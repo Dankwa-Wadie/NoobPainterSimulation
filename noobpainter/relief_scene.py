@@ -15,7 +15,7 @@ from pathlib import Path
 
 import bpy
 
-job = json.loads(Path(sys.argv[sys.argv.index("--") + 1]).read_text())
+job = json.loads(Path(sys.argv[sys.argv.index("--") + 1]).read_text(encoding="utf-8"))
 W, H = job["size"]                      # frame size, px
 aspect = W / H
 depth = float(job.get("depth", 0.18))   # relief height, in slab widths

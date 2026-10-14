@@ -160,7 +160,7 @@ class PictureOnlyTest(unittest.TestCase):
             (painted / "frames" / "f.png").write_bytes(b"x")
             Image.new("RGB", (8, 8), (100, 100, 100)).save(painted / "painting.png")
             grade = [20, 220, 1.0]
-            (painted / "strokes.json").write_text(json.dumps({"grade": grade}))
+            (painted / "strokes.json").write_text(json.dumps({"grade": grade}), encoding="utf-8")
             res = painting._picture_only(painted, Path(td), "van_gogh", owns=False)
             got = Image.open(res["image"]).getpixel((0, 0))
             self.assertEqual(got, (brushwork.grade_lut(grade)[100],) * 3)
@@ -202,7 +202,7 @@ class AppVideoTest(unittest.TestCase):
             (painted / "frames").mkdir(parents=True)
             (painted / "frames" / "f.png").write_bytes(b"x")
             Image.new("RGB", (40, 70)).save(painted / "painting.png")
-            (painted / "strokes.json").write_text("{}")
+            (painted / "strokes.json").write_text("{}", encoding="utf-8")
             seen = {}
 
             def render(frames, strokes, video, seconds, size, music, config=None):

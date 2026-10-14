@@ -56,7 +56,7 @@ def _fetch_music() -> None:
     import sys
     _music.update(status="running", log=[])
     proc = subprocess.Popen([sys.executable, str(ROOT / "tools" / "fetch_classical.py")], cwd=ROOT,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1)
     for line in proc.stdout:
         line = line.rstrip().split("\r")[-1]
         if line:
@@ -80,7 +80,7 @@ def _install_model() -> None:
                                             "On Windows, see the README: install ComfyUI and the four model files by hand."])
         return
     proc = subprocess.Popen(["bash", str(ROOT / "tools" / "install_image_model.sh")], stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, text=True, bufsize=1)
+                            stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1)
     for line in proc.stdout:
         line = line.rstrip().split("\r")[-1]
         if line:

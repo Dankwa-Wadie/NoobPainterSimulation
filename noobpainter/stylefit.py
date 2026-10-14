@@ -65,7 +65,7 @@ def learn(folder: Path) -> dict[str, dict[str, float]]:
     for name, group in (("bw_exaggerated", bw), ("caricature", car)):
         targets.setdefault(name, {})["examples"] = len(group)
     TARGETS.parent.mkdir(parents=True, exist_ok=True)
-    TARGETS.write_text(json.dumps(targets, indent=1))
+    TARGETS.write_text(json.dumps(targets, indent=1), encoding="utf-8")
     return targets
 
 
@@ -133,7 +133,7 @@ CANDIDATES: dict[str, list[dict[str, Any]]] = {
 def tune(style: str, reference: Path, out: Path) -> dict[str, Any]:
     """Paint each candidate quickly, measure it, keep the closest to the target."""
     import brushwork
-    target = json.loads(TARGETS.read_text())[style]
+    target = json.loads(TARGETS.read_text(encoding="utf-8"))[style]
     results = []
     for i, cand in enumerate(CANDIDATES[style]):
         folder = out / f"{style}-{i}"
@@ -147,7 +147,7 @@ def tune(style: str, reference: Path, out: Path) -> dict[str, Any]:
         LOG.info("%s #%d: total %.2f (style %.2f, fidelity %.2f)  %s", style, i, sc["total"],
                  sc["style"], sc["fidelity"], "  ".join(f"{k} {sc[k]:.2f}/{target[k]:.2f}" for k in SCALE))
     best = min(results, key=lambda r: r["distance"])
-    (out / f"{style}-results.json").write_text(json.dumps(results, indent=1))
+    (out / f"{style}-results.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
     return best
 
 
@@ -159,8 +159,8 @@ def fit_grade(style: str, out: Path) -> dict[str, Any]:
 
     Grading is applied to the video after painting, so this needs no repaint."""
     import brushwork
-    target = json.loads(TARGETS.read_text())[style]
-    results = json.loads((out / f"{style}-results.json").read_text())
+    target = json.loads(TARGETS.read_text(encoding="utf-8"))[style]
+    results = json.loads((out / f"{style}-results.json").read_text(encoding="utf-8"))
     best = None
     for r in results:
         img = Image.open(r["painting"]).convert("RGB")
@@ -170,7 +170,7 @@ def fit_grade(style: str, out: Path) -> dict[str, Any]:
             if best is None or sc["total"] < best["distance"]:
                 best = {**r, "settings": {**r["settings"], "grade": grade},
                         "distance": sc["total"], "measures": sc}
-    (out / f"{style}-best.json").write_text(json.dumps(best, indent=1))
+    (out / f"{style}-best.json").write_text(json.dumps(best, indent=1), encoding="utf-8")
     LOG.info("%s: candidate %d with grade %s, total %.2f (style %.2f, fidelity %.2f)", style,
              best["candidate"], best["settings"]["grade"], best["distance"],
              best["measures"]["style"], best["measures"]["fidelity"])

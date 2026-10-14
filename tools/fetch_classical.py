@@ -114,7 +114,7 @@ def scan_voices(manifest: list[dict], seconds: float = 60.0) -> None:
 def main(limit: int = 24) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     manifest_path = OUT / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else []
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else []
     have = {m["title"] for m in manifest}
     titles = sorted({t for c in CATEGORIES for t in members(c) if wanted(t)} - have)
     print(f"{len(titles)} candidate recordings")
@@ -140,14 +140,14 @@ def main(limit: int = 24) -> None:
             tmp.unlink()
             secs = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                                          "-of", "csv=p=0", str(dst)], capture_output=True,
-                                        text=True).stdout or 0)
+                                        text=True, encoding="utf-8", errors="replace").stdout or 0)
             manifest.append({"file": dst.name, "title": page["title"], "licence": licence,
                              "artist": meta.get("Artist", {}).get("value", ""),
                              "source": ii.get("descriptionurl", ""), "seconds": round(secs, 1)})
-            manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
+            manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
             print(f"  ok ({licence}, {secs:.0f}s): {name}")
     scan_voices(manifest)
-    manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
+    manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"{len(manifest)} recordings in {OUT}")
 
 

@@ -85,7 +85,7 @@ def describe(idea: str, style: str, music: Path | None) -> str:
     import handplay
     credit = ""
     if music:
-        manifest = json.loads((handplay.MUSIC / "manifest.json").read_text())
+        manifest = json.loads((handplay.MUSIC / "manifest.json").read_text(encoding="utf-8"))
         m = next((m for m in manifest if m["file"] == music.name), None)
         if m:
             credit = (f"\n\nMusic: {m['title'].removeprefix('File:').rsplit('.', 1)[0]} "
@@ -176,7 +176,7 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
                         (int(cfg["width"]), int(cfg["height"])), music, config=play)
         title = title_for(style, seed)
         desc = describe(idea, style, music)
-        (out / "credits.txt").write_text(f"{title}\n\n{desc}\n")
+        (out / "credits.txt").write_text(f"{title}\n\n{desc}\n", encoding="utf-8")
         image = _still(painted, out)
         if not cfg["keep_frames"]:
             shutil.rmtree(painted / "frames", ignore_errors=True)
@@ -194,7 +194,7 @@ def _still(painted: Path, out: Path) -> Path:
     """The finished painting as a picture, graded as the video's last frame is."""
     import brushwork
     from PIL import Image
-    grade = json.loads((painted / "strokes.json").read_text()).get("grade")
+    grade = json.loads((painted / "strokes.json").read_text(encoding="utf-8")).get("grade")
     image = out / "painting.png"
     brushwork.apply_grade(Image.open(painted / "painting.png").convert("RGB"), grade).save(image)
     return image
@@ -265,12 +265,12 @@ def _ink_page(idea: str, style: str, out: Path, config: dict[str, Any],
             made = "A comic panel in ink and screentone"
         desc = f"{made}, made by a computer simulation, not a human artist ({style.replace('_', ' ')} style)."
         if music:
-            m = next((m for m in json.loads((handplay.MUSIC / "manifest.json").read_text())
+            m = next((m for m in json.loads((handplay.MUSIC / "manifest.json").read_text(encoding="utf-8"))
                       if m["file"] == music.name), None)
             if m:
                 desc += (f"\n\nMusic: {m['title'].removeprefix('File:').rsplit('.', 1)[0]} "
                          f"({m['licence']}, via Wikimedia Commons / Musopen).")
-        (out / "credits.txt").write_text(f"{title}\n\n{desc}\n")
+        (out / "credits.txt").write_text(f"{title}\n\n{desc}\n", encoding="utf-8")
         if owns:
             progress.finish(title)
         # the manga page ends finished; the comic panel ends on a blur, so it has no picture

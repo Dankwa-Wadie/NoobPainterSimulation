@@ -326,10 +326,10 @@ def carve(picture: Path | str, out_dir: Path | str, cfg: dict[str, Any]) -> dict
     size = cfg.get("frame_size", [1440, 2560])
     job = {"heights": [s for s, _ in shots], "out_dir": str(frames), "size": size,
            "material": cfg.get("material", "wood"), "depth": float(cfg.get("relief", 0.18))}
-    (out / "blender-job.json").write_text(json.dumps(job))
+    (out / "blender-job.json").write_text(json.dumps(job), encoding="utf-8")
     blender = subprocess.Popen([str(BLENDER), "-b", "--factory-startup", "-P", str(SCENE), "--",
                                 str(out / "blender-job.json")],
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
     for line in blender.stdout:
         if line.startswith("RENDERED"):
             done, total = line.split()[1].split("/")
@@ -340,13 +340,13 @@ def carve(picture: Path | str, out_dir: Path | str, cfg: dict[str, Any]) -> dict
     if len(rendered) != len(shots):
         raise RuntimeError(f"Blender rendered {len(rendered)} of {len(shots)} views")
     (frames / "frames.tsv").write_text("file\thand_secs\tticks\tchunks_done\tkind\n" + "".join(
-        f"{p.name}\t{t:.1f}\t0\t0\ttick\n" for p, (_, t) in zip(rendered, shots)))
+        f"{p.name}\t{t:.1f}\t0\t0\ttick\n" for p, (_, t) in zip(rendered, shots)), encoding="utf-8")
     painting = out / "painting.png"
     shutil.copy(rendered[-1], painting)
     shutil.rmtree(heights, ignore_errors=True)
     record = {"aspect": aspect, "height_units": 1000 / aspect, "strokes": plan, "dips": [],
               "style": cfg.get("style", ""), "medium": "moulding" if mould else "carving", "grade": None,
               "playback": cfg.get("playback") or {}}
-    (out / "strokes.json").write_text(json.dumps(record))
+    (out / "strokes.json").write_text(json.dumps(record), encoding="utf-8")
     progress.set_preview(painting)
     return {"painting": painting, "frames": frames, "strokes": out / "strokes.json"}

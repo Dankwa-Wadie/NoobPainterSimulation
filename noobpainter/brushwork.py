@@ -1043,7 +1043,7 @@ def _run(lua: Path, png: Path, width: int, frames: Path | None = None,
                 "--frame-width", str(frame_width)]
     with tempfile.TemporaryFile("w+") as out:
         proc = subprocess.Popen(cmd, cwd=oilpaint.VENDOR, stdout=out, stderr=subprocess.STDOUT,
-                                text=True)
+                                text=True, encoding="utf-8", errors="replace")
         started, shown = time.time(), ""
         while proc.poll() is None:
             time.sleep(3)
@@ -1051,7 +1051,7 @@ def _run(lua: Path, png: Path, width: int, frames: Path | None = None,
                 proc.kill()
                 raise RuntimeError("easel ran over six hours")
             if frames and expect and (frames / "frames.tsv").exists():
-                rows = (frames / "frames.tsv").read_text().splitlines()
+                rows = (frames / "frames.tsv").read_text(encoding="utf-8").splitlines()
                 last = rows[-1].split("\t") if len(rows) > 1 else []
                 if len(last) > 1 and last[0] != shown:
                     shown = last[0]
@@ -1125,7 +1125,7 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
                                     f"brush, {len(recipes)} colours mixed")
         if n < len(cfg["layers"]) - 1:                    # see what the paint really did
             script = work / f"upto-{n}.lua"
-            script.write_text("\n".join(lua) + "\n")
+            script.write_text("\n".join(lua) + "\n", encoding="utf-8")
             png = work / f"upto-{n}.png"
             _run(script, png, 1000)
             canvas = np.asarray(Image.open(png).convert("RGB").resize((1000, H), Image.LANCZOS),
@@ -1194,7 +1194,7 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
         lua += _group_lua(g, len(plan))
         plan += g["strokes"]
     script = out / "painting.lua"
-    script.write_text("\n".join(lua) + "\n")
+    script.write_text("\n".join(lua) + "\n", encoding="utf-8")
     frames = out / "frames"
     shutil.rmtree(frames, ignore_errors=True)
     png = out / "painting.png"
@@ -1220,7 +1220,7 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
               "dips": dips, "layers": cfg["layers"], "style": cfg.get("style") or "",
               "grade": cfg.get("grade"), "medium": cfg.get("medium", "oil"),
               "playback": cfg.get("playback") or {}}
-    (out / "strokes.json").write_text(json.dumps(record))
+    (out / "strokes.json").write_text(json.dumps(record), encoding="utf-8")
     shutil.rmtree(work, ignore_errors=True)
     return {"painting": png, "frames": frames, "strokes": out / "strokes.json", "lua": script}
 

@@ -135,13 +135,13 @@ def shutdown(cfg: dict[str, Any]) -> None:
     port = urllib.parse.urlparse(cfg["url"]).port or 8189
     try:
         out = subprocess.run(["lsof", "-tiTCP:%d" % port, "-sTCP:LISTEN"],
-                             capture_output=True, text=True, timeout=10).stdout.split()
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10).stdout.split()
     except (OSError, subprocess.SubprocessError):
         return
     for pid in out:
         try:
             cmd = subprocess.run(["ps", "-o", "command=", "-p", pid], capture_output=True,
-                                 text=True, timeout=5).stdout
+                                 text=True, encoding="utf-8", errors="replace", timeout=5).stdout
             if "main.py" in cmd and "ComfyUI" in cmd:     # only ever our ComfyUI
                 os.kill(int(pid), signal.SIGTERM)
                 LOG.info("ComfyUI stopped to free memory")
@@ -213,7 +213,7 @@ def comfy_turn(cfg: dict[str, Any] | None = None, what: str = "a render"):
     by anything that doesn't take the lock. Timeouts start once it's our turn.
     """
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
-    handle = open(LOCK_FILE, "a+")
+    handle = open(LOCK_FILE, "a+", encoding="utf-8")
     began, told = time.time(), False
     try:
         while True:
