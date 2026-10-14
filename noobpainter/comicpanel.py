@@ -1,13 +1,13 @@
 """Comic halftone: a manga panel in ink and screentone, that slowly drifts out of focus.
 
 A black-and-white comic panel
-fades in from white, holds sharp, then the camera pushes in slowly while a blur
-spreads from the edges (the face stays sharpest longest), and it fades out.
+fades in from white, holds sharp, then a blur spreads slowly from the edges (the face
+stays sharpest longest), and it fades out. The camera stays still (no push in).
 
   the look   ink lines and solid blacks kept crisp; mid-greys turned into a printed
              screentone (round dots on a 45-degree grid, their size by the tone);
              light areas left white.
-  the motion fade in, hold, push in with a blur that grows from the edges, fade out.
+  the motion fade in, hold, a blur that grows from the edges, fade out.
 
 Any picture works; drawn from an idea, it asks for a black-and-white manga
 illustration of an original character.
@@ -27,7 +27,7 @@ LOG = logging.getLogger("mken.comicpanel")
 DEFAULTS: dict[str, Any] = {
     "seconds": 6.5, "fps": 30, "size": [1080, 1920],
     "fade_in": 0.6, "hold": 2.2, "fade_out": 0.6,
-    "push": 1.22,                    # the zoom it ends on
+    "push": 1.0,                     # the zoom it ends on (1: none, a still panel; was 1.22)
     "blur": 22.0,                    # px at the frame's edges, at the end
     "cell": 7,                       # screentone dot spacing, px at 1080 wide
     "ink": 70, "white": 236,         # below: solid ink; above: paper; between: dots

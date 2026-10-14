@@ -187,7 +187,8 @@ class Player:
         self.flat = None
         if cfg.get("ruler") and cfg.get("hand_overlay") and (HAND.parent / "flat.png").exists():
             flat = Image.open(HAND.parent / "flat.png").convert("RGBA")
-            k = min(size) * 0.42 / float(cfg.get("zoom") or 1) / flat.width
+            # the flat hand, in proportion to the drawing hand (hand_width)
+            k = min(size) * 0.42 * float(cfg["hand_width"]) / 0.55 / float(cfg.get("zoom") or 1) / flat.width
             self.flat = flat.resize((int(flat.width * k), int(flat.height * k)), Image.LANCZOS)
         # a compass's leg length: just long enough for its widest arc
         spans = [np.hypot(x - s["pivot"][0], y - s["pivot"][1])
@@ -633,7 +634,8 @@ def render(frames: Path, strokes: Path, out: Path, seconds: float = 50.0,
                 last_zoom = live_zoom
             else:
                 # The reveal: pull back from the close-up, turn it the right way up, hold.
-                pull = _ease((v - done_at) / float(cfg["pullback"]))
+                back = float(cfg["pullback"])
+                pull = _ease((v - done_at) / back) if back > 0 else 1.0     # 0: no camera move
                 shown = final.rotate(180) if flip else final
                 img = camera.view(shown, None, 1.0 / fps, last_zoom + (1 - last_zoom) * pull)
                 if flip and v >= done_at + float(cfg["pullback"]):

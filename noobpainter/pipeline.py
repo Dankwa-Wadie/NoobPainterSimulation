@@ -192,7 +192,12 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
         every = int(cfg["upside_down_every"]) if cfg["shorts"] else 0
         flip = bool(every) and seed % every == 0
         games = {} if cfg["shorts"] else {"teaser": 0, "ending_text": ""}
-        play = {**config, "handplay": {**games, **(config.get("handplay") or {}), "upside_down": flip}}
+        # A plain canvas: the whole painting in view from the first stroke to the last, no
+        # close-up following the brush and no pull-back (the Shorts kept the camera moves).
+        still = {} if cfg["shorts"] else {"zoom": 1.0, "subject_zoom": 1.0, "pullback": 0.0,
+                                          "hand_width": 0.3}
+        play = {**config, "handplay": {**games, **still, **(config.get("handplay") or {}),
+                                       "upside_down": flip}}
         video_out = out / "painting.mp4"
         handplay.render(painted / "frames", painted / "strokes.json", video_out, float(cfg["seconds"]),
                         (int(cfg["width"]), int(cfg["height"])), music, config=play)

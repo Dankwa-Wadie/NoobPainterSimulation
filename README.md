@@ -61,9 +61,9 @@ it paints. A painting takes a few thousand strokes.
 **4. Every stroke is recorded.** Where it went and when. That is how the video can follow
 the brush (and, with `--hand`, show a hand moving exactly along each stroke).
 
-**5. It's cut into a video.** A close-up camera follows the brush, so you watch the strokes
-go down; the subject is painted last; then the camera pulls back to reveal the whole
-picture, and holds on it. The video keeps your picture's shape (landscape, portrait or
+**5. It's cut into a video.** A plain canvas, all of it in view the whole time: no zooming
+in or out, you just watch the strokes go down until the picture is finished, then it
+holds on it. The video keeps your picture's shape (landscape, portrait or
 square). Music is up to you: calm public-domain classical, your own, or none.
 
 ### Other materials, same idea
@@ -73,7 +73,7 @@ square). Music is up to you: calm public-domain classical, your own, or none.
 - **Carving and clay** — a 3D block carved away (or clay built up) bit by bit, rendered in Blender under raking light, in wood, marble or terracotta.
 - **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*). Oil paint (moving) takes several pictures: they are its poses, in order, each smeared into the next in black oil paint and the last back into the first, so it loops. With one picture it sways gently; no image model is needed either way. The moving styles take the first picture's shape (so put the picture with the shape you want first), or a clip's own; a picture of another shape is fitted whole over a soft, blurred copy of itself, never cut off.
 - **Bizarre manga** — made as manga is: a blue pencil rough, brush-pen ink (face first), hatching and solid blacks, the blue fades out, then flat bold colour under the ink. With `--hand`, a hand holds the pencil for the rough and the pen for the ink.
-- **Comic halftone** — ink and printed dot shading over the whole panel; it fades in, holds, then pushes in as the picture softens (the dots stay crisp).
+- **Comic halftone** — ink and printed dot shading over the whole panel; it fades in, holds, then softens from the edges (the dots stay crisp).
 
 **The honest part:** there is no human painter and no real canvas. It is a computer
 simulation of painting. What makes it more than a filter is that the paint, the brushes
@@ -245,14 +245,14 @@ description and the music's licence) into the output folder.
 |---|---|
 | `noobpainter/brushwork.py` | plans the strokes: layers, colours, directions, style presets |
 | `noobpainter/oilpaint.py` | paint mixing and swatch calibration |
-| `noobpainter/handplay.py` | the video: camera, reveal, compass/ruler, optional hand, music |
+| `noobpainter/handplay.py` | the video: the canvas as it's painted, compass/ruler, optional hand, music |
 | `noobpainter/lineart.py` | maze, waves, continuous line, compass spiral |
 | `noobpainter/carving.py`, `relief_scene.py` | carving and clay moulding, rendered in Blender |
 | `noobpainter/paintanim.py` | moving paintings, and repainting a clip frame by frame |
 | `noobpainter/stylefit.py` | fits a style to example pictures |
 | `noobpainter/riso.py` | risograph print effect |
 | `noobpainter/manga.py` | bizarre manga: rough, ink, hatching, blacks, then colour |
-| `noobpainter/comicpanel.py` | comic halftone: screentone, push in and blur |
+| `noobpainter/comicpanel.py` | comic halftone: screentone and blur |
 | `noobpainter/pipeline.py` | picture/idea in, video out |
 | `noobpainter/ui.py` | the web app |
 | `noobpainter/wanvideo.py` | **experimental:** local video model (Wan 2.2) for motion — unreliable on a 24 GB Mac; only subtle motion |
