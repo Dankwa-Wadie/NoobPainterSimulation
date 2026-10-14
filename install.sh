@@ -70,7 +70,7 @@ say "Fetching the music (free public-domain recordings)"
 .venv/bin/python tools/fetch_classical.py || echo "  (music skipped; videos will be silent until you run tools/fetch_classical.py)"
 
 choice="${WITH_IMAGE_MODEL:-ask}"
-if [ "$choice" = "ask" ] && [ -r /dev/tty ]; then
+if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then
   printf '\nInstall the local image model too? It lets you paint from a typed idea\n'
   printf 'instead of a picture. About 20 GB to download. You can also do it later from the app. [y/N] '
   read -r answer < /dev/tty || answer=n
@@ -89,7 +89,7 @@ fi
 say "All set. To open the app:"
 echo "    cd \"$DIR\" && .venv/bin/python -m noobpainter ui"
 echo
-if [ -r /dev/tty ]; then
+if (: < /dev/tty) 2>/dev/null; then
   printf 'Open it now? [Y/n] '
   read -r go < /dev/tty || go=n
   case "$go" in [nN]*) ;; *) exec .venv/bin/python -m noobpainter ui ;; esac
