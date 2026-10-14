@@ -39,7 +39,7 @@ DEFAULTS: dict[str, Any] = {
     "hero_secs": 0.7,          # video seconds per hero stroke
     "hold": 2.5,               # the finished painting, hand gone
     "smooth": 0.12,            # s: how far the hand lags its target in the fast parts
-    "hand_width": 0.55,        # sprite width as a share of the frame width
+    "hand_width": 0.55,        # sprite width as a share of the frame's short side (its width, in portrait)
     "shadow": (18, 26, 0.32),  # offset px, blur px, opacity
     # The guess-the-painting opening: the finished painting blurred past
     # recognition, easing only a little, under a question.
@@ -158,8 +158,9 @@ class Player:
         self.hand = None
         if hand:
             img = Image.open(hand["file"]).convert("RGBA")
-            # sized for the close-up: hand_width of the video's width once zoomed
-            k = size[0] * float(cfg["hand_width"]) / float(cfg.get("zoom") or 1) / img.width
+            # sized for the close-up: hand_width of the video's short side once zoomed
+            # (its width in portrait; by the width, a landscape video's hand was huge)
+            k = min(size) * float(cfg["hand_width"]) / float(cfg.get("zoom") or 1) / img.width
             self.hand = img.resize((int(img.width * k), int(img.height * k)), Image.LANCZOS)
             self.tip = (hand["tip"][0] * k, hand["tip"][1] * k)
             off, blur, alpha = cfg["shadow"]
@@ -186,7 +187,7 @@ class Player:
         self.flat = None
         if cfg.get("ruler") and cfg.get("hand_overlay") and (HAND.parent / "flat.png").exists():
             flat = Image.open(HAND.parent / "flat.png").convert("RGBA")
-            k = size[0] * 0.42 / float(cfg.get("zoom") or 1) / flat.width
+            k = min(size) * 0.42 / float(cfg.get("zoom") or 1) / flat.width
             self.flat = flat.resize((int(flat.width * k), int(flat.height * k)), Image.LANCZOS)
         # a compass's leg length: just long enough for its widest arc
         spans = [np.hypot(x - s["pivot"][0], y - s["pivot"][1])
@@ -277,12 +278,12 @@ class Player:
                 da = (rang - self.ruler_at[2] + np.pi / 2) % np.pi - np.pi / 2   # a ruler has no front
                 self.ruler_at = self.ruler_at + np.array([rx - self.ruler_at[0], ry - self.ruler_at[1], da]) * k
             x, y, a = self.ruler_at
-            img = draw_ruler(img, ((x, y), a), self.size[0], holder=self.flat, pencil=tip)
+            img = draw_ruler(img, ((x, y), a), min(self.size), holder=self.flat, pencil=tip)
         if self.cfg.get("compass") and tip is not None and self.pivot is not None:
             # the lead is exactly on the line (no smoothing: a compass can't lag)
             self.pos = tip
             pivot = np.array(self.pivot, dtype=np.float64) * self.scale
-            return draw_compass(img, pivot, tip, self.size[0], lifted=not down, leg=self.leg)
+            return draw_compass(img, pivot, tip, min(self.size), lifted=not down, leg=self.leg)
         if self.hand is None or tip is None:
             self.pos = None
             return img
@@ -304,7 +305,7 @@ def caption(img: Image.Image, text: str, y: float = 0.12, alpha: float = 1.0) ->
     if not text or alpha <= 0:
         return img
     W, H = img.size
-    size = int(W * 0.072)
+    size = int(min(W, H) * 0.072)                   # by the short side: landscape too
 
     def bold(px: int) -> Any:
         font = ImageFont.truetype(str(FONT), px)

@@ -71,7 +71,7 @@ Calm public-domain classical music plays underneath.
 - **Pen** — every mark one pen line: a maze that forms the picture, op-art waves, one continuous line.
 - **Compass spiral** — the picture drawn as one spiral of compass arcs; the line weight carries the picture.
 - **Carving and clay** — a 3D block carved away (or clay built up) bit by bit, rendered in Blender under raking light, in wood, marble or terracotta.
-- **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*). Oil paint (moving) takes several pictures: they are its poses, in order, each smeared into the next in black oil paint and the last back into the first, so it loops. With one picture it sways gently; no image model is needed either way. The moving styles keep your shape: a clip's own, or the first picture's (so put the picture with the shape you want first); a picture of another shape is fitted whole over a soft, blurred copy of itself, never cut off.
+- **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*). Oil paint (moving) takes several pictures: they are its poses, in order, each smeared into the next in black oil paint and the last back into the first, so it loops. With one picture it sways gently; no image model is needed either way. The moving styles take the first picture's shape (so put the picture with the shape you want first), or a clip's own; a picture of another shape is fitted whole over a soft, blurred copy of itself, never cut off.
 - **Bizarre manga** — made as manga is: a blue pencil rough, brush-pen ink (face first), hatching and solid blacks, the blue fades out, then flat bold colour under the ink. With `--hand`, a hand holds the pencil for the rough and the pen for the ink.
 - **Comic halftone** — ink and printed dot shading over the whole panel; it fades in, holds, then pushes in as the picture softens (the dots stay crisp).
 
@@ -189,8 +189,9 @@ cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui   # opens http:
 Drop in a picture (several for Oil paint (moving): put them in order with the arrows on
 their thumbnails; or a short clip for the moving styles), pick a style from the
 preview cards, and choose what to make: **the painting video** (pick its length and
-whether to show a hand) or **just the finished picture**, which is quicker, keeps your
-picture's shape and is a PNG to download. The moving and ink styles are videos only.
+whether to show a hand) or **just the finished picture**, which is quicker and is a PNG
+to download. Every style keeps your picture's shape: a landscape photo makes a landscape
+video (from a typed idea, it's a 9:16 Short). The moving and ink styles are videos only.
 A video can have no music, the free calm classical music (download it from the app if the
 installer skipped it), or your own: choose a music file and it loops to the video's length.
 Press **Paint it**: progress, a live view of the canvas and the finished video (with its

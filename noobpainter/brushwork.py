@@ -1073,7 +1073,7 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
     cfg = settings(config)
     if cfg.get("medium") == "carving":                 # carved in Blender, not painted
         import carving
-        return carving.carve(picture, out_dir, {**cfg, "frame_size": [1440, 2560]})
+        return carving.carve(picture, out_dir, {"frame_size": [1440, 2560], **cfg})   # a Short's, unless given
     if not oilpaint.installed():
         raise RuntimeError(f"the easel isn't built ({oilpaint.EASEL})")
     out = Path(out_dir)

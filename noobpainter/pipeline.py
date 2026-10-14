@@ -19,7 +19,8 @@ LOG = logging.getLogger("noobpainter")
 
 DEFAULTS: dict[str, Any] = {
     "seconds": 45.0,
-    "width": 1080, "height": 1920,
+    "width": 1080, "height": 1920,  # from an idea; from a picture, its own shape (shape_of)
+    "long_side": 1920,              # the video's long side, in a picture's shape
     "image_width": 576, "image_height": 1024,
     "keep_frames": False,       # the frames are a few GB a painting; the video keeps the story
     "upside_down_every": 4,     # one painting in this many is painted upside down (0: never)
@@ -48,6 +49,16 @@ TITLES = {  # by medium: a carving called "the painting" read wrong
     "moulding": ["Guess what I'm sculpting 🏺", "Can you tell what this is yet? 🏺",
                  "What am I sculpting? Guess before the end 🏺"],
 }
+
+
+def shape_of(picture: Path | str, long_side: int) -> tuple[int, int]:
+    """A video size in the picture's own shape (turned as its camera meant), `long_side`
+    on its long side, in even pixels."""
+    from PIL import Image, ImageOps
+    with Image.open(picture) as img:
+        w, h = ImageOps.exif_transpose(img).size
+    s = long_side / max(w, h)
+    return max(2, round(w * s / 2) * 2), max(2, round(h * s / 2) * 2)
 
 
 def title_for(style: str, seed: int) -> str:
@@ -139,6 +150,9 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
                              Path(video) if video else None, reference_images=pictures or None)
         return {**res, "image": last_frame(Path(res["video"]), out / "painting.png")}
     cfg = settings(config)
+    if picture and "width" not in (config.get("painting") or {}):
+        # every style keeps your picture's shape (a Short from an idea stays 9:16)
+        cfg["width"], cfg["height"] = shape_of(picture, int(cfg["long_side"]))
     seed = int(hashlib.sha1(f"{idea}|{style}".encode()).hexdigest()[:8], 16)
     owns = not progress.active()
     if owns:
@@ -147,18 +161,16 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
         ref = out / "reference.png"
         if picture and not ref.exists():
             from PIL import Image, ImageOps
-            img = Image.open(picture).convert("RGB")
+            img = ImageOps.exif_transpose(Image.open(picture)).convert("RGB")
             size = (int(cfg["image_width"]) * 2, int(cfg["image_height"]) * 2)
-            if playback:                                # any shape in; the Short is 9:16
-                ImageOps.fit(img, size, Image.LANCZOS).save(ref)
-            else:                                       # a picture keeps its own shape
-                img.thumbnail((max(size),) * 2, Image.LANCZOS)
-                img.save(ref)
+            img.thumbnail((max(size),) * 2, Image.LANCZOS)    # it keeps its own shape
+            img.save(ref)
         progress.stage("reference", f"{style}: {idea[:100]}")
         reference(idea, style, config, ref, seed)
         painted = out / "painted"
         if not ((painted / "strokes.json").exists() and any((painted / "frames").glob("*.png"))):
-            bcfg = {**(config.get("brushwork") or {}), "style": style}
+            bcfg = {**(config.get("brushwork") or {}), "style": style,
+                    "frame_size": [int(cfg["width"]) * 4 // 3 // 2 * 2, int(cfg["height"]) * 4 // 3 // 2 * 2]}
             if not playback:   # a few small frames are enough for the progress bar and preview
                 bcfg.update(max_frames=40, frame_width=720)
             brushwork.paint(ref, painted, {**config, "brushwork": bcfg})
@@ -237,6 +249,10 @@ def _ink_page(idea: str, style: str, out: Path, config: dict[str, Any],
         ref = out / "reference.png"
         if picture and not ref.exists():
             shutil.copy(picture, ref)
+        if picture:                           # the page in your picture's shape, not 9:16
+            size = list(shape_of(picture, int(settings(config)["long_side"])))
+            config = {**config, "manga": {"size": size, **(config.get("manga") or {})},
+                      "comicpanel": {"size": size, **(config.get("comicpanel") or {})}}
         if not ref.exists():
             progress.stage("reference", idea[:100])
             lcfg = {"longform": {"local_image": {**(config.get("local_image") or {}),
