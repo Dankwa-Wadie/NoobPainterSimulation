@@ -34,8 +34,7 @@ COMFY_PYTHON = COMFY_HOME / "standalone-env" / "bin" / "python3"
 
 DEFAULTS: dict[str, Any] = {
     "url": "http://127.0.0.1:8189",
-    # Q4. With the 8-step add-on and the model released after each video it
-    # runs ~20 s a step (~3 min a scene) on the 24 GB Mac; Q3 was no faster.
+    # Q4 with the 8-step add-on: about 3 minutes a picture on a 24 GB Apple Silicon Mac.
     "unet": "qwen-image-2512-Q4_K_M.gguf",
     "text_encoder": "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf",
     "vae": "qwen_image_vae.safetensors",
@@ -44,20 +43,9 @@ DEFAULTS: dict[str, Any] = {
     "width": 1024, "height": 576,       # 16:9; the frame scales it up
     "steps": 8, "cfg": 1.0, "shift": 3.1,
     "timeout": 600,                     # per picture; a stuck one is cancelled and skipped
-    # Scenes match the Watcher: dark, gritty 16-bit pixel art.
-    "style": ("dark gritty pixel art, 16-bit retro game style, chunky visible pixels, "
-              "muted desaturated palette of greys, greens and rust, deep shadows, "
-              "eerie atmosphere, horror mystery mood, no text, no watermark, no captions, "
-              "places and objects rather than people, no bodies, no victims"),
-    # The model fills documents, logs and signs with fake writing, so the
-    # prompt steers away from them and the negative names them outright.
-    # Real cases: never bodies, never invented portraits of real victims.
-    "negative": ("corpse, dead body, bodies lying on the floor, blood, injury, victim, "
-                 "family portrait, posed group portrait, "
-                 "text, letters, words, writing, handwriting, numbers, signs, labels, "
-                 "open book pages, documents, newspaper, "
-                 "watermark, logo, caption, photograph, photorealistic, "
-                 "smooth gradients, 3d render, blurry, deformed, bright cheerful colors"),
+    # The pipeline passes each style's own look and negative prompt; these are fallbacks.
+    "style": "detailed illustration, one clear subject, clean composition, no text, no watermark",
+    "negative": "text, letters, watermark, logo, caption, blurry, deformed",
 }
 
 MODEL_DIRS = {"unet": "unet", "text_encoder": "text_encoders", "vae": "vae", "lora": "loras"}

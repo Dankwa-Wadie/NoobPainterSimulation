@@ -34,6 +34,27 @@ NOTES = {"relief_wood": "carved in Blender", "relief_marble": "carved in Blender
          "anim_oil_morph": "takes a picture or a clip"}
 
 _job: dict = {}
+_model: dict = {"status": "idle", "log": []}
+
+
+def model_state() -> dict:
+    """Whether the optional local image model is installed, and any install's progress."""
+    import localimage
+    cfg = localimage.settings(None)
+    return {"installed": localimage.installed(cfg), "missing": localimage.missing_files(cfg),
+            "install": _model.get("status"), "log": _model.get("log", [])[-12:]}
+
+
+def _install_model() -> None:
+    import subprocess
+    _model.update(status="running", log=[])
+    proc = subprocess.Popen(["bash", str(ROOT / "tools" / "install_image_model.sh")], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, bufsize=1)
+    for line in proc.stdout:
+        line = line.rstrip().split("\r")[-1]
+        if line:
+            _model["log"] = (_model["log"] + [line])[-40:]
+    _model["status"] = "done" if proc.wait() == 0 else "failed"
 
 
 def styles() -> list[dict]:
@@ -95,6 +116,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, PAGE.encode(), "text/html; charset=utf-8")
         if url.path == "/api/styles":
             return self._json(200, {"styles": styles()})
+        if url.path == "/api/model":
+            return self._json(200, model_state())
         if url.path == "/api/job":
             state = progress.snapshot()
             data = {k: _job.get(k) for k in ("status", "style", "error", "title", "description")}
@@ -128,6 +151,11 @@ class Handler(BaseHTTPRequestHandler):
             dst.write_bytes(data)
             kind = "video" if ext in {".mp4", ".mov", ".m4v", ".webm"} else "picture"
             return self._json(200, {"file": dst.name, "kind": kind})
+        if url.path == "/api/model/install":
+            if _model.get("status") == "running":
+                return self._json(409, {"error": "already installing"})
+            threading.Thread(target=_install_model, daemon=True).start()
+            return self._json(200, {"ok": True})
         if url.path == "/api/paint":
             if _job.get("status") == "running":
                 return self._json(409, {"error": "a painting is already being made"})
@@ -192,6 +220,7 @@ button.go{margin-top:18px;width:100%;padding:13px;border:0;border-radius:11px;ba
 .bar{height:10px;background:var(--line);border-radius:10px;overflow:hidden;margin:10px 0}.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .6s}
 .status{display:flex;justify-content:space-between;gap:10px}.muted{color:var(--muted)}.err{color:#c4372b}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;max-height:170px;overflow:auto;font-size:12px;white-space:pre-wrap}
+.model{margin-top:8px;font-size:13px;color:var(--muted)}.model button{margin-left:6px;padding:5px 10px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;cursor:pointer}.model pre{max-height:110px}.model a{color:var(--accent)}
 .result video,.live img{width:100%;max-height:520px;object-fit:contain;border-radius:10px;background:#000}.live img{background:var(--bg)}
 a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 </style></head><body><main>
@@ -201,8 +230,9 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
   <h2>1 · Picture</h2>
   <div class="drop" id="drop"><div id="dropview">Drop a picture or a short video here, or click to choose</div></div>
   <input type="file" id="file" accept="image/*,video/*" hidden>
-  <label for="idea">Or describe an idea <span class="muted">(needs the optional local image model)</span></label>
+  <label for="idea">Or describe an idea</label>
   <input type="text" id="idea" placeholder="e.g. a lighthouse on a cliff in a storm">
+  <div class="model" id="model"></div>
   <h2 style="margin-top:20px">2 · Style</h2>
   <div class="styles" id="styles"></div>
   <h2 style="margin-top:20px">3 · Options</h2>
@@ -250,5 +280,13 @@ async function poll(){const r=await fetch('/api/job');const j=await r.json();
  if(j.preview&&j.preview_at!==lastPreview&&st==='running'){lastPreview=j.preview_at;$('#live').innerHTML=`<img src="${j.preview}?t=${lastPreview}" alt="The canvas so far">`;}
  if(st==='done'&&j.video){$('#live').innerHTML='';$('#result').innerHTML=`<video src="${j.video}" controls autoplay playsinline></video><a class="dl" href="${j.video}" download>Download the video</a><p class="muted" style="white-space:pre-wrap">${(j.title||'')}</p>`;}
  if(st==='running')setTimeout(poll,2000);}
-loadStyles();poll();
+async function model(){const r=await fetch('/api/model');const m=await r.json();const el=$('#model');
+ if(m.installed){el.innerHTML='✓ Local image model ready: ideas can be drawn on this computer.';$('#idea').disabled=false;return;}
+ $('#idea').disabled=true;$('#idea').placeholder='Install the local image model to describe an idea';
+ if(m.install==='running'){el.innerHTML=`Installing the local image model (about 20 GB, resumable)…<pre>${(m.log||[]).join('\n')}</pre>`;setTimeout(model,3000);return;}
+ el.innerHTML=(m.install==='failed'?'<span class="err">The install stopped — press again to resume.</span> ':'')+
+  `To paint from a typed idea, this computer needs a local image model (Qwen-Image, about 20 GB, free).<button type="button" id="getmodel">Install it</button> <a href="https://github.com/Dankwa-Wadie/NoobPainterSimulation#the-local-image-model-optional" target="_blank" rel="noopener">What is this?</a>`;}
+document.addEventListener('click',async e=>{if(e.target.id!=='getmodel')return;e.target.disabled=true;
+ const r=await fetch('/api/model/install',{method:'POST',body:'{}'});if(r.ok)model();});
+loadStyles();poll();model();
 </script></body></html>"""

@@ -109,28 +109,74 @@ and the order of the work are modelled on how real artists paint.
 
 ---
 
-## Setup
+## Install
 
-Needs Python 3.10+, [Rust](https://rustup.rs) (to build the paint engine), ffmpeg, and —
-for carving — [Blender](https://www.blender.org).
+**One line.** Open Terminal (macOS: press ⌘ Space, type *Terminal*) and paste:
 
 ```sh
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-./setup.sh                          # fetches claude-paint, applies patches/, builds it
-python tools/fetch_classical.py     # optional: the music (public domain / CC0, licence-checked)
+curl -fsSL https://raw.githubusercontent.com/Dankwa-Wadie/NoobPainterSimulation/main/install.sh | bash
 ```
 
-Optional:
-- **Drawing pictures from an idea** (`--idea`) uses a local [ComfyUI](https://github.com/comfyanonymous/ComfyUI) with Qwen-Image (`noobpainter/localimage.py`); set `NOOBPAINTER_COMFY_HOME` if it isn't in `~/ComfyUI-Installs/ComfyUI`. Without it, pass your own picture.
-- **Blender** is found at the macOS default path; set `NOOBPAINTER_BLENDER` otherwise.
+It does everything, so you don't need to clone the repo yourself:
+- installs what's missing: git, Python 3, ffmpeg (via Homebrew on macOS, which it installs if needed) and Rust;
+- downloads this project into `~/NoobPainterSimulation`;
+- sets up a private Python environment and builds the paint engine (a few minutes the first time);
+- fetches the free classical music;
+- asks whether to install the optional local image model (about 20 GB);
+- opens the app.
+
+Run the same line again to update. Works on macOS (Apple Silicon or Intel) and Linux;
+on Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) (Ubuntu) and run it there.
+
+Afterwards, open the app any time with:
+
+```sh
+cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui
+```
+
+### The local image model (optional)
+
+You only need this to paint from a **typed idea**; painting your own pictures works
+without it. It is [Qwen-Image 2512](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF)
+running in [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on your computer: free,
+private, nothing sent anywhere.
+
+- **Easiest:** in the app, press **Install it** under *Describe an idea*. Progress shows
+  on the page, and you can press it again to resume if it stops.
+- **Or in Terminal:** `bash ~/NoobPainterSimulation/tools/install_image_model.sh`
+
+It downloads about 20 GB (it checks for 25 GB free first) into `~/ComfyUI-Installs/ComfyUI`
+(set `NOOBPAINTER_COMFY_HOME` to put it elsewhere), and works best with 16 GB of memory
+or more. About 3 minutes a picture on an Apple Silicon Mac. Files and sources:
+
+| File | From | Size |
+|---|---|---|
+| `qwen-image-2512-Q4_K_M.gguf` | [unsloth/Qwen-Image-2512-GGUF](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF) | 13.2 GB |
+| `Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf`, `mmproj-F16.gguf` | [unsloth/Qwen2.5-VL-7B-Instruct-GGUF](https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF) | 6.0 GB |
+| `qwen_image_vae.safetensors` | [Comfy-Org/Qwen-Image_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI) | 0.25 GB |
+| `Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors` | [lightx2v/Qwen-Image-2512-Lightning](https://huggingface.co/lightx2v/Qwen-Image-2512-Lightning) | 0.85 GB |
+
+### Optional: Blender
+
+The carving styles (`relief_wood`, `relief_marble`, `relief_clay`) render in
+[Blender](https://www.blender.org/download/) (free). The installer looks for it in
+`/Applications`; set `NOOBPAINTER_BLENDER` if it lives elsewhere.
+
+### By hand (if you prefer)
+
+```sh
+git clone https://github.com/Dankwa-Wadie/NoobPainterSimulation && cd NoobPainterSimulation
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+./setup.sh                                   # needs Rust: https://rustup.rs
+.venv/bin/python tools/fetch_classical.py    # the music
+```
 
 ## Use
 
 **The app** — the easiest way:
 
 ```sh
-python -m noobpainter ui        # opens http://127.0.0.1:8770 in your browser
+cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui   # opens http://127.0.0.1:8770
 ```
 
 Drop in a picture (or a short clip for the moving styles), pick a style from the
