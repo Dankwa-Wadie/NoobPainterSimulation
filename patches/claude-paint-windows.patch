@@ -1,0 +1,249 @@
+diff --git a/crates/easel/src/check.rs b/crates/easel/src/check.rs
+index e262066..649ad69 100644
+--- a/crates/easel/src/check.rs
++++ b/crates/easel/src/check.rs
+@@ -26,8 +26,9 @@
+ use crate::session::Session;
+ #[cfg(feature = "replay")]
+ use std::io::Write;
++#[cfg(unix)]
+ use std::os::unix::io::AsRawFd;
+-use std::os::unix::net::UnixStream;
++use crate::uds::UnixStream;
+ #[cfg(feature = "replay")]
+ use std::sync::Arc;
+ #[cfg(feature = "replay")]
+@@ -41,6 +42,7 @@ const HOOK_EVERY: u32 = 1_000_000;
+ #[cfg(feature = "replay")]
+ const STOPPED: &str = "check stopped";
+ 
++#[cfg(unix)]
+ #[repr(C)]
+ struct PollFd {
+     fd: i32,
+@@ -49,14 +51,19 @@ struct PollFd {
+ }
+ #[cfg(target_os = "linux")]
+ type NFds = u64;
+-#[cfg(not(target_os = "linux"))]
++#[cfg(all(unix, not(target_os = "linux")))]
+ type NFds = u32;
++#[cfg(unix)]
+ unsafe extern "C" {
+     fn poll(fds: *mut PollFd, n: NFds, timeout: i32) -> i32;
+ }
++#[cfg(unix)]
+ const POLLOUT: i16 = 0x4;
++#[cfg(unix)]
+ const POLLERR: i16 = 0x8;
++#[cfg(unix)]
+ const POLLHUP: i16 = 0x10;
++#[cfg(unix)]
+ const POLLNVAL: i16 = 0x20;
+ 
+ /// Whether the client at the other end of `conn` is gone (it closed, timed out or died), so
+@@ -64,6 +71,11 @@ const POLLNVAL: i16 = 0x20;
+ /// first), so the check asks the socket: a socket whose peer has closed reports POLLHUP and,
+ /// on macOS, is no longer writable. (Clients before the length line shut down their sending
+ /// side, which macOS also reports as POLLHUP, hence the writability test there.)
++#[cfg(not(unix))]
++pub fn client_gone(_: &UnixStream) -> bool {
++    false
++}
++#[cfg(unix)]
+ pub fn client_gone(conn: &UnixStream) -> bool {
+     let mut p = PollFd { fd: conn.as_raw_fd(), events: POLLOUT, revents: 0 };
+     if unsafe { poll(&mut p, 1, 0) } < 0 {
+diff --git a/crates/easel/src/main.rs b/crates/easel/src/main.rs
+index 9b7c89e..51e5a9f 100644
+--- a/crates/easel/src/main.rs
++++ b/crates/easel/src/main.rs
+@@ -41,6 +41,7 @@ mod session;
+ #[cfg(feature = "replay")]
+ mod state_dump;
+ mod time;
++mod uds;
+ mod world;
+ #[cfg(all(test, feature = "replay"))]
+ mod thinner_measure;
+@@ -51,7 +52,7 @@ use paint::Canvas;
+ use paint::color::linear_to_srgb;
+ use session::{Session, parse_program, root};
+ use std::io::{Read, Write};
+-use std::os::unix::net::{UnixListener, UnixStream};
++use uds::{UnixListener, UnixStream};
+ use std::path::{Path, PathBuf};
+ use std::process::ExitCode;
+ use std::time::{Duration, Instant};
+@@ -234,11 +235,18 @@ fn short_sock(dir: &Path) -> PathBuf {
+     if p.as_os_str().len() < 100 {
+         return p;
+     }
++    // no private temp directory to be had without Unix permissions (and no session server)
++    #[cfg(not(unix))]
++    return p;
+     // fnv1a, not DefaultHasher: client and server must agree across Rust releases
++    #[cfg(unix)]
+     let file = format!("{:016x}.sock", save::fnv1a(dir.as_os_str().as_encoded_bytes()));
+     // the user is whoever owns the studio (the nearest existing ancestor of the session dir)
++    #[cfg(unix)]
+     let owner = dir.ancestors().find_map(|a| std::fs::metadata(a).ok()).map(|m| std::os::unix::fs::MetadataExt::uid(&m));
++    #[cfg(unix)]
+     let Some(uid) = owner else { return p };
++    #[cfg(unix)]
+     for base in [std::env::temp_dir(), PathBuf::from("/tmp")] {
+         let private = base.join(format!("easel-{uid}"));
+         let s = private.join(&file);
+@@ -246,11 +254,13 @@ fn short_sock(dir: &Path) -> PathBuf {
+             return s;
+         }
+     }
++    #[cfg(unix)]
+     p
+ }
+ /// Whether dir is a directory only uid can enter, making it (0700) if it is
+ /// missing. In a shared temp dir another user could make it first, or make
+ /// it a symlink: then it isn't private, and isn't used.
++#[cfg(unix)]
+ fn private_dir(dir: &Path, uid: u32) -> bool {
+     use std::os::unix::fs::{DirBuilderExt, MetadataExt};
+     let _ = std::fs::DirBuilder::new().mode(0o700).create(dir);
+@@ -556,15 +566,18 @@ fn open(args: &[String]) -> Result<(), String> {
+             let _ = std::fs::remove_file(sock_path(&name));
+             let log = std::fs::File::create(dir.join("server.log")).map_err(|e| e.to_string())?;
+             let exe = std::env::current_exe().map_err(|e| e.to_string())?;
++            #[cfg(unix)]
+             use std::os::unix::process::CommandExt;
+-            std::process::Command::new(exe)
++            let mut command = std::process::Command::new(exe);
++            #[cfg(unix)]
++            command.process_group(0);
++            command
+                 .args(["serve", &name])
+                 .env(LOCK_ON_STDIN, "1")
+                 // the server holds the lock from here on (the same open file)
+                 .stdin(lock)
+                 .stdout(log.try_clone().map_err(|e| e.to_string())?)
+                 .stderr(log)
+-                .process_group(0)
+                 .spawn()
+                 .map_err(|e| format!("could not start the session: {e}"))?;
+             started = true;
+@@ -615,17 +628,7 @@ fn serve_lock(name: &str) -> Result<std::fs::File, String> {
+     // SAFETY: read and removed before the server starts any thread
+     unsafe { std::env::remove_var(LOCK_ON_STDIN) };
+     let lock = if on_stdin {
+-        use std::os::fd::AsFd;
+-        use std::os::unix::fs::MetadataExt;
+-        // a duplicate of stdin: the same open file, so the same lock
+-        let f = std::fs::File::from(std::io::stdin().as_fd().try_clone_to_owned().map_err(|e| e.to_string())?);
+-        let (held, want) = (f.metadata().map_err(|e| e.to_string())?, std::fs::metadata(lock_path(name)).map_err(|e| e.to_string())?);
+-        if (held.dev(), held.ino()) != (want.dev(), want.ino()) {
+-            return Err(format!("{LOCK_ON_STDIN} is set but stdin isn't {}", lock_path(name).display()));
+-        }
+-        // already ours (the open file `open` locked): this doesn't wait
+-        f.try_lock().map_err(|e| format!("{}: {e}", lock_path(name).display()))?;
+-        f
++        lock_on_stdin(name)?
+     } else {
+         std::fs::create_dir_all(session_dir(name)).map_err(|e| e.to_string())?;
+         match try_lock(name)? {
+@@ -642,6 +645,26 @@ fn serve_lock(name: &str) -> Result<std::fs::File, String> {
+     Ok(lock)
+ }
+ 
++/// The open file `open` locked and passed on stdin (Unix: the child inherits fd 0).
++#[cfg(unix)]
++fn lock_on_stdin(name: &str) -> Result<std::fs::File, String> {
++    use std::os::fd::AsFd;
++    use std::os::unix::fs::MetadataExt;
++    // a duplicate of stdin: the same open file, so the same lock
++    let f = std::fs::File::from(std::io::stdin().as_fd().try_clone_to_owned().map_err(|e| e.to_string())?);
++    let (held, want) = (f.metadata().map_err(|e| e.to_string())?, std::fs::metadata(lock_path(name)).map_err(|e| e.to_string())?);
++    if (held.dev(), held.ino()) != (want.dev(), want.ino()) {
++        return Err(format!("{LOCK_ON_STDIN} is set but stdin isn't {}", lock_path(name).display()));
++    }
++    // already ours (the open file `open` locked): this doesn't wait
++    f.try_lock().map_err(|e| format!("{}: {e}", lock_path(name).display()))?;
++    Ok(f)
++}
++#[cfg(not(unix))]
++fn lock_on_stdin(_: &str) -> Result<std::fs::File, String> {
++    Err(format!("{LOCK_ON_STDIN} is set, but passing the lock on stdin needs Unix"))
++}
++
+ // ---------------------------------------------------------------- server
+ 
+ struct Server {
+@@ -1590,10 +1613,19 @@ fn normalized_path(path: &Path) -> std::io::Result<PathBuf> {
+ 
+ #[cfg(any(feature = "replay", feature = "state-store"))]
+ fn same_file(a: &Path, b: &Path) -> Result<bool, String> {
+-    use std::os::unix::fs::MetadataExt;
+     let resolve = |p: &Path| normalized_path(p).map_err(|e| format!("{}: {e}", p.display()));
+-    Ok(resolve(a)? == resolve(b)? || match (std::fs::metadata(a), std::fs::metadata(b)) {
+-        (Ok(a), Ok(b)) => (a.dev(), a.ino()) == (b.dev(), b.ino()),
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::MetadataExt;
++        Ok(resolve(a)? == resolve(b)? || match (std::fs::metadata(a), std::fs::metadata(b)) {
++            (Ok(a), Ok(b)) => (a.dev(), a.ino()) == (b.dev(), b.ino()),
++            _ => false,
++        })
++    }
++    // no inode numbers in std here: the same path once resolved, or the same canonical path
++    #[cfg(not(unix))]
++    Ok(resolve(a)? == resolve(b)? || match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
++        (Ok(a), Ok(b)) => a == b,
+         _ => false,
+     })
+ }
+diff --git a/crates/easel/src/uds.rs b/crates/easel/src/uds.rs
+new file mode 100644
+index 0000000..07e8fc6
+--- /dev/null
++++ b/crates/easel/src/uds.rs
+@@ -0,0 +1,43 @@
++//! The session's socket. On Unix, std's Unix-domain sockets. Elsewhere (Windows)
++//! there is no live session server: these stand-ins compile and fail with a reason,
++//! so `easel run` and the other one-shot commands build and work there.
++#[cfg(unix)]
++pub use std::os::unix::net::{UnixListener, UnixStream};
++#[cfg(not(unix))]
++pub use stub::{UnixListener, UnixStream};
++
++#[cfg(not(unix))]
++mod stub {
++    use std::io;
++    use std::path::Path;
++    use std::time::Duration;
++
++    fn unsupported<T>() -> io::Result<T> {
++        Err(io::Error::new(io::ErrorKind::Unsupported,
++            "live easel sessions need Unix sockets (macOS, Linux); here only one-shot commands such as `easel run` work"))
++    }
++
++    pub struct UnixStream(());
++    impl UnixStream {
++        pub fn connect<P: AsRef<Path>>(_: P) -> io::Result<Self> { unsupported() }
++        pub fn try_clone(&self) -> io::Result<Self> { unsupported() }
++        pub fn set_nonblocking(&self, _: bool) -> io::Result<()> { unsupported() }
++        pub fn set_read_timeout(&self, _: Option<Duration>) -> io::Result<()> { unsupported() }
++        pub fn set_write_timeout(&self, _: Option<Duration>) -> io::Result<()> { unsupported() }
++    }
++    impl io::Read for UnixStream {
++        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> { unsupported() }
++    }
++    impl io::Write for UnixStream {
++        fn write(&mut self, _: &[u8]) -> io::Result<usize> { unsupported() }
++        fn flush(&mut self) -> io::Result<()> { unsupported() }
++    }
++
++    pub struct UnixListener(());
++    impl UnixListener {
++        pub fn bind<P: AsRef<Path>>(_: P) -> io::Result<Self> { unsupported() }
++        pub fn accept(&self) -> io::Result<(UnixStream, ())> { unsupported() }
++        pub fn incoming(&self) -> std::iter::Empty<io::Result<UnixStream>> { std::iter::empty() }
++        pub fn set_nonblocking(&self, _: bool) -> io::Result<()> { unsupported() }
++    }
++}

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Fetch and build the paint simulator (claude-paint, MIT) with the one change this
-# project needs: a hand_secs() clock, so the playback can put the hand on each stroke.
+# Fetch and build the paint simulator (claude-paint, MIT) with the changes this
+# project needs: a hand_secs() clock, so the playback can put the hand on each stroke,
+# and a build that compiles on Windows.
 # Needs: git, Rust (https://rustup.rs), a C compiler. Python deps: requirements.txt.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -15,6 +16,11 @@ if [ ! -d vendor/claude-paint ]; then
 fi
 if ! grep -q hand_secs vendor/claude-paint/crates/easel/src/api.rs; then
   git -C vendor/claude-paint apply "$PWD/patches/claude-paint-hand-secs.patch"
+fi
+# Windows has no Unix sockets: build without the live session server (`easel run` is all
+# this project uses). A no-op on macOS and Linux, applied everywhere so the code is one.
+if [ ! -f vendor/claude-paint/crates/easel/src/uds.rs ]; then
+  git -C vendor/claude-paint apply "$PWD/patches/claude-paint-windows.patch"
 fi
 # every pigment box (the modern palette needs cadmiums, ultramarine, viridian...)
 (cd vendor/claude-paint && cargo build --release -p easel --features all-boxes)

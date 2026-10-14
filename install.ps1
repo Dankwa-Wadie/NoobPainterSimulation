@@ -99,6 +99,10 @@ if (-not (Test-Path $Vendor)) {
 if (-not (Select-String -Quiet -Pattern hand_secs (Join-Path $Vendor "crates\easel\src\api.rs"))) {
     Run git -C $Vendor apply (Join-Path $Dir "patches\claude-paint-hand-secs.patch")
 }
+# Windows has no Unix sockets: build without the live session server (`easel run` is all this uses)
+if (-not (Test-Path (Join-Path $Vendor "crates\easel\src\uds.rs"))) {
+    Run git -C $Vendor apply (Join-Path $Dir "patches\claude-paint-windows.patch")
+}
 Push-Location $Vendor
 try { Run cargo build --release -p easel --features all-boxes } finally { Pop-Location }
 
