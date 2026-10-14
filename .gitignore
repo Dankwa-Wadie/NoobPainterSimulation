@@ -7,3 +7,6 @@ out/
 # the recordings are fetched by tools/fetch_classical.py; their licences are in manifest.json
 assets/music/classical/*
 !assets/music/classical/manifest.json
+
+# this computer's own choices, saved by the app (e.g. where Blender is)
+settings.json

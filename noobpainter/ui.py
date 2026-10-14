@@ -35,6 +35,10 @@ NOTES = {"relief_wood": "carved in Blender", "relief_marble": "carved in Blender
          "anim_oil_morph": "takes a picture or a clip"}
 
 PICTURES = {".png", ".jpg", ".jpeg", ".webp"}
+VIDEOS = {".mp4", ".mov", ".m4v", ".webm"}
+CLIP_STYLES = ("anim_van_gogh", "anim_oil_morph")      # the styles that can repaint a video clip
+MULTI_STYLES = ("anim_oil_morph",)                     # the one style that takes several pictures
+BLENDER_STYLES = ("relief_wood", "relief_marble", "relief_clay")
 MAX_PICTURES = 8                 # Oil paint (moving): a pose each
 AUDIO = {".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".flac", ".opus"}
 
@@ -88,6 +92,34 @@ def _install_model() -> None:
     _model["status"] = "done" if proc.wait() == 0 else "failed"
 
 
+_blender: dict = {"checked": None}
+
+
+def blender_state(path: str | None = None) -> dict:
+    """Whether Blender (for the carving styles) is connected: found in the usual places
+    or where the person pointed, and runs. Looked for afresh, so a later install shows."""
+    import carving
+    found = carving.find_blender()
+    version = carving.blender_version(found) if found else None
+    return {"found": bool(version), "path": str(found) if found else "", "version": version or "",
+            "saved": bool(carving._saved().get("blender"))}
+
+
+def connect_blender(path: str) -> dict:
+    """Point the app at a Blender the usual places miss (a program, or on macOS its .app)."""
+    import carving
+    p = Path(path.strip().strip('"').strip("'")).expanduser()
+    if p.suffix == ".app":
+        p = p / "Contents" / "MacOS" / "Blender"
+    if p.is_dir():                                # its folder: the program inside
+        p = next((q for q in (p / "blender.exe", p / "blender", p / "Blender") if q.is_file()), p)
+    version = carving.blender_version(p)
+    if not version:
+        return {**blender_state(), "error": f"No Blender that runs at {p}"}
+    carving.save_blender(str(p))
+    return blender_state()
+
+
 # What the hand holds, by the style's playback hand (handplay: assets/hand/<name>.json)
 HAND_TOOL = {"": "the brush", "pencil": "the pencil", "pen": "the pen",
              "carving": "the carving tool", "mould": "the modelling tool"}
@@ -110,14 +142,17 @@ def styles() -> list[dict]:
         if st.get("process") == "mould":
             medium = "carving"
         rows.append({"name": name, "medium": MEDIUM_LABEL.get(medium, medium), "video_only": False,
+                     "clip": False, "multi": False, "blender": name in BLENDER_STYLES,
                      "hand": hand_tool(st),
                      "note": NOTES.get(name, ""), "preview": (PREVIEWS / f"{name}.gif").exists()})
     for name in ("anim_van_gogh", "anim_oil_morph"):
         rows.append({"name": name, "medium": MEDIUM_LABEL["animation"], "note": NOTES[name], "video_only": True,
+                     "clip": name in CLIP_STYLES, "multi": name in MULTI_STYLES, "blender": False,
                      "hand": None,
                      "preview": (PREVIEWS / f"{name}.gif").exists()})
     for name, note in (("bizarre_manga", "inked, then coloured"), ("comic_halftone", "dots, then a slow blur")):
         rows.append({"name": name, "medium": "Ink", "note": note, "video_only": True,
+                     "clip": False, "multi": False, "blender": False,
                      "hand": "the pencil, then the pen" if name == "bizarre_manga" else None,
                      "preview": (PREVIEWS / f"{name}.gif").exists()})
     rows.sort(key=lambda r: r["name"] != "contemporary")     # the default first
@@ -171,6 +206,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, model_state())
         if url.path == "/api/music":
             return self._json(200, music_state())
+        if url.path == "/api/blender":
+            return self._json(200, blender_state())
         if url.path == "/api/job":
             state = progress.snapshot()
             data = {k: _job.get(k) for k in ("status", "style", "error", "title", "description")}
@@ -207,6 +244,18 @@ class Handler(BaseHTTPRequestHandler):
             kind = ("video" if ext in {".mp4", ".mov", ".m4v", ".webm"} else
                     "audio" if ext in AUDIO else "picture")
             return self._json(200, {"file": dst.name, "kind": kind})
+        if url.path == "/api/blender":
+            try:
+                b = json.loads(self.rfile.read(length) or b"{}")
+            except ValueError:
+                return self._json(400, {"error": "bad request"})
+            if b.get("forget"):
+                import carving
+                carving.save_blender(None)
+                return self._json(200, blender_state())
+            if b.get("path"):
+                return self._json(200, connect_blender(str(b["path"])))
+            return self._json(200, blender_state())          # look again
         if url.path == "/api/music/install":
             if _music.get("status") == "running":
                 return self._json(409, {"error": "already downloading"})
@@ -233,6 +282,9 @@ class Handler(BaseHTTPRequestHandler):
             files = [UPLOADS / Path(n).name for n in names]
             if any(not f.exists() for f in files):
                 return self._json(400, {"error": "upload the file again"})
+            if len(files) > 1 and style not in MULTI_STYLES:
+                return self._json(400, {"error": "this style paints one picture at a time: only Oil paint "
+                                                 "(moving) takes several"})
             if len(files) > 1 and any(f.suffix.lower() not in PICTURES for f in files):
                 return self._json(400, {"error": "several files must all be pictures: a video goes on its own"})
             upload = files[0] if files else None
@@ -241,9 +293,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400, {"error": "choose a picture or describe an idea"})
             if upload and upload.suffix.lower() in AUDIO:
                 return self._json(400, {"error": "that's music: add it under Music, and choose a picture to paint"})
-            is_video = bool(upload and upload.suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"})
-            if is_video and not style.startswith("anim_"):
-                return self._json(400, {"error": "a video clip needs a Moving painting style"})
+            is_video = bool(upload and upload.suffix.lower() in VIDEOS)
+            if is_video and style not in CLIP_STYLES:
+                return self._json(400, {"error": "this style takes a picture, not a video: Van Gogh (moving) "
+                                                 "and Oil paint (moving) take a clip"})
+            if style in BLENDER_STYLES and not blender_state()["found"]:
+                return self._json(400, {"error": "the carving styles need Blender: install it free from "
+                                                 "blender.org, then connect it under Style"})
             import pipeline
             playback = b.get("playback", True) is not False
             if not playback and (style in pipeline.VIDEO_ONLY or is_video):
@@ -318,6 +374,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}h1{margin:0 0 4px;fon
 .drop img,.drop video{max-width:100%;max-height:220px;border-radius:8px;display:block;margin:0 auto 8px}
 .thumbs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:6px}.thumbs figure{margin:0;width:74px;position:relative}
 .thumbs img{width:74px;height:110px;object-fit:cover;margin:0 0 3px}.thumbs figcaption{position:absolute;top:3px;left:3px;background:var(--accent);color:var(--accent-ink);border-radius:9px;font-size:11px;padding:0 6px}
+.thumbs figure.unused{opacity:.35}.blendpath{display:flex;gap:6px;margin-top:6px}.blendpath input{flex:1}
 .thumbs span{display:flex;justify-content:space-between}.thumbs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;width:22px;height:22px;padding:0;font:inherit;line-height:1;cursor:pointer}.thumbs button:disabled{opacity:.35;cursor:default}
 label{display:block;margin:14px 0 6px;font-weight:600}input[type=text],input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.row label{margin:0;font-weight:500}
@@ -337,14 +394,15 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 <div class="grid">
  <section class="panel">
   <h2>1 · Picture</h2>
-  <div class="drop" id="drop"><div id="dropview">Drop pictures or a short video here, or click to choose</div></div>
-  <input type="file" id="file" accept="image/*,video/*" multiple hidden>
+  <div class="drop" id="drop"><div id="dropview">Drop a picture here, or click to choose</div></div>
+  <input type="file" id="file" accept="image/*" hidden>
   <label for="idea">Or describe an idea</label>
   <input type="text" id="idea" placeholder="e.g. a lighthouse on a cliff in a storm">
   <div class="model" id="model"></div>
   <p class="muted" id="manynote"></p>
   <h2 style="margin-top:20px">2 · Style</h2>
   <div class="styles" id="styles"></div>
+  <div class="model" id="blender" style="display:none"></div>
   <h2 style="margin-top:20px">3 · What to make</h2>
   <div class="row" id="make"><label><input type="radio" name="make" value="video" checked> The painting video <span class="muted">(watch it painted, stroke by stroke)</span></label>
    <label><input type="radio" name="make" value="picture"> Just the finished picture <span class="muted">(faster)</span></label></div>
@@ -381,9 +439,18 @@ function syncMake(){const p=pictureOnly(),row=styleRows.find(r=>r.name===style);
  const tool=row?row.hand:'the brush';$('#hand').disabled=!tool;if(!tool)$('#hand').checked=false;
  $('#handlabel').style.opacity=tool?'':'.5';$('#handtool').textContent=tool||'a tool';
  $('#handnote').textContent=tool?'':`${nice(style)} has no hand to show.`;
- const many=uploads.length>1&&uploads[0].kind!=='video';
- $('#manynote').textContent=!many?'':style==='anim_oil_morph'?`Your ${uploads.length} pictures are the poses, in order: each smears into the next, and the last back into the first.`:
-  `${nice(style)} paints the first picture. Oil paint (moving) uses them all, as poses.`;}
+ // what this style takes: Oil paint (moving) several pictures; the moving styles a clip; the rest one picture
+ const multi=!!(row&&row.multi),clip=!!(row&&row.clip),vid=uploads[0]&&uploads[0].kind==='video';
+ $('#file').multiple=multi;$('#file').accept=clip?'image/*,video/*':'image/*';
+ if(!uploads.length)$('#dropview').textContent=dropText();
+ $('#manynote').innerHTML=vid&&!clip?`<span class="err">${nice(style)} takes a picture, not a video: choose a picture, or Van Gogh (moving) or Oil paint (moving) for this clip.</span>`:
+  uploads.length>1&&multi?`Your ${uploads.length} pictures are the poses, in order: each smears into the next, and the last back into the first.`:
+  uploads.length>1?`${nice(style)} paints one picture: picture 1. Only Oil paint (moving) uses several.`:'';
+ document.querySelectorAll('.thumbs figure').forEach((f,i)=>f.classList.toggle('unused',i>0&&!multi));
+ $('#blender').style.display=row&&row.blender?'':'none';if(row&&row.blender&&!blenderInfo)blender();}
+const dropText=()=>{const row=styleRows.find(r=>r.name===style)||{};
+ return row.multi?'Drop pictures here (up to 8, in order), or a short clip, or click to choose':
+  row.clip?'Drop a picture or a short clip here, or click to choose':'Drop a picture here, or click to choose';};
 document.querySelectorAll('input[name=make]').forEach(r=>r.onchange=syncMake);
 let ownMusic=null,musicLib=false;
 const musicChoice=()=>document.querySelector('input[name=music]:checked').value;
@@ -404,7 +471,7 @@ document.addEventListener('click',async e=>{if(e.target.id!=='getmusic')return;e
 document.addEventListener('click',e=>{if(e.target.id==='changemusic')$('#musicfile').click();});
 const nice=n=>NAMES[n]||n.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 async function loadStyles(){const r=await fetch('/api/styles');const j=await r.json();styleRows=j.styles;
- $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}-final.jpg" data-still="/previews/${s.name}-final.jpg" data-play="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}</small></button>`).join('');syncMake();}
+ $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}-final.jpg" data-still="/previews/${s.name}-final.jpg" data-play="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}${s.blender&&blenderInfo&&!blenderInfo.found?' · <span class="err">needs Blender</span>':''}</small></button>`).join('');syncMake();}
 // the finished piece as a still; the preview of its making plays on hover
 $('#styles').addEventListener('mouseover',e=>{const i=e.target.closest('.card')?.querySelector('img');if(i&&i.dataset.play&&i.src.indexOf('.gif')<0)i.src=i.dataset.play;});
 $('#styles').addEventListener('mouseout',e=>{const c=e.target.closest('.card');if(!c||c.contains(e.relatedTarget))return;const i=c.querySelector('img');if(i&&i.dataset.still)i.src=i.dataset.still;});
@@ -414,28 +481,32 @@ drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragle
 drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');send([...e.dataTransfer.files]);};
 $('#file').onchange=e=>{send([...e.target.files]);e.target.value='';};
 // several pictures (Oil paint (moving) makes them its poses, in this order), or one video
-const EMPTY='Drop pictures or a short video here, or click to choose';
-function showUploads(){const el=$('#dropview');if(!uploads.length){el.textContent=EMPTY;syncMake();return;}
+function showUploads(){const el=$('#dropview');if(!uploads.length){el.textContent=dropText();syncMake();return;}
  if(uploads[0].kind==='video'){el.innerHTML=`<video src="${uploads[0].url}" muted autoplay loop playsinline></video><small>${uploads[0].name}</small>`;syncMake();return;}
  const one=uploads.length===1;
  el.innerHTML=(one?`<img src="${uploads[0].url}" alt="">`:'')+`<div class="thumbs">`+(one?'':uploads.map((u,i)=>`<figure><img src="${u.url}" alt=""><figcaption>${i+1}</figcaption><span>`+
   `<button type="button" data-move="${i}" data-by="-1" title="Earlier"${i?'':' disabled'}>‹</button><button type="button" data-drop="${i}" title="Remove">×</button>`+
   `<button type="button" data-move="${i}" data-by="1" title="Later"${i<uploads.length-1?'':' disabled'}>›</button></span></figure>`).join(''))+
-  `</div><small>${one?uploads[0].name:uploads.length+' pictures'} · click or drop to add more</small>`;syncMake();}
+  `</div><small>${one?uploads[0].name:uploads.length+' pictures'} · `+((styleRows.find(r=>r.name===style)||{}).multi?'click or drop to add more':'click or drop to replace')+`</small>`;syncMake();}
 drop.addEventListener('click',e=>{const b=e.target.closest('.thumbs button');if(!b)return;e.stopPropagation();
  if(b.dataset.drop!==undefined)uploads.splice(+b.dataset.drop,1);
  else{const i=+b.dataset.move,j=i+(+b.dataset.by);[uploads[i],uploads[j]]=[uploads[j],uploads[i]];}showUploads();});
-async function send(files){if(!files.length)return;$('#formerr').textContent='';$('#dropview').textContent='Uploading…';
+async function send(files){if(!files.length)return;$('#formerr').textContent='';
+ const row=styleRows.find(r=>r.name===style)||{};
+ if(!row.multi&&files.length>1){files=files.slice(0,1);$('#formerr').textContent=`${nice(style)} takes one file at a time: only Oil paint (moving) takes several pictures.`;}
+ const isVid=f=>/^video\//.test(f.type)||/\.(mp4|mov|m4v|webm)$/i.test(f.name);
+ if(!row.clip&&files.some(isVid)){files=files.filter(f=>!isVid(f));
+  $('#formerr').textContent=`${nice(style)} takes a picture, not a video: Van Gogh (moving) and Oil paint (moving) take a clip.`;if(!files.length)return;}
+ $('#dropview').textContent='Uploading…';
  for(const f of files){const r=await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();
   if(!r.ok){$('#formerr').textContent=j.error;continue;}
   if(j.kind==='audio'){$('#formerr').textContent='That\'s music: add it under Music, below.';continue;}
   const u={file:j.file,kind:j.kind,name:f.name.replace(/[<>&"]/g,''),url:URL.createObjectURL(f)};
-  if(u.kind==='video'||(uploads[0]&&uploads[0].kind==='video'))uploads=[u];      // a video goes on its own
+  if(u.kind==='video'||(uploads[0]&&uploads[0].kind==='video')||!row.multi)uploads=[u];   // one at a time; a video alone
   else if(uploads.length<8)uploads.push(u);else $('#formerr').textContent='8 pictures at most';}
- showUploads();
- if(uploads[0]&&uploads[0].kind==='video'&&!style.startsWith('anim_')){style='anim_van_gogh';document.querySelector('input[name=make][value=video]').checked=true;loadStyles();}}
+ showUploads();}
 $('#go').onclick=async()=>{$('#formerr').textContent='';
- const body={style,idea:$('#idea').value,files:uploads.map(u=>u.file),seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
+ const body={style,idea:$('#idea').value,files:((styleRows.find(r=>r.name===style)||{}).multi?uploads:uploads.slice(0,1)).map(u=>u.file),seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
  const r=await fetch('/api/paint',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
  if(!r.ok){$('#formerr').textContent=j.error;return;}$('#result').innerHTML='';poll();};
 async function poll(){const r=await fetch('/api/job');const j=await r.json();
@@ -453,7 +524,20 @@ async function model(){const r=await fetch('/api/model');const m=await r.json();
  if(m.install==='running'){el.innerHTML=`Installing the local image model (about 20 GB, resumable)…<pre>${(m.log||[]).join('\n')}</pre>`;setTimeout(model,3000);return;}
  el.innerHTML=(m.install==='failed'?'<span class="err">The install stopped — press again to resume.</span> ':'')+
   `To paint from a typed idea, this computer needs a local image model (Qwen-Image, about 20 GB, free).<button type="button" id="getmodel">Install it</button> <a href="https://github.com/Dankwa-Wadie/NoobPainterSimulation#the-local-image-model-optional" target="_blank" rel="noopener">What is this?</a>`;}
+// Blender, for the carving styles: found in the usual places, or pointed at; looked for afresh
+let blenderInfo=null;
+async function blender(how){const el=$('#blender');el.innerHTML='Looking for Blender…';
+ const r=await fetch('/api/blender',how?{method:'POST',body:JSON.stringify(how)}:undefined);const b=await r.json();blenderInfo=b;
+ const esc=t=>String(t||'').replace(/[<>&"]/g,'');
+ if(b.found){el.innerHTML=`✓ ${esc(b.version)} connected <span class="muted">(${esc(b.path)})</span> <button type="button" data-blend="look">Look again</button>`+
+  (b.saved?` <button type="button" data-blend="forget">Forget this location</button>`:'');}
+ else el.innerHTML=(b.error?`<span class="err">${esc(b.error)}</span><br>`:'')+
+  `The carving styles render in Blender (free), which isn't connected yet. <a href="https://www.blender.org/download/" target="_blank" rel="noopener">Download Blender</a>, install it, then <button type="button" data-blend="look">Look again</button>`+
+  `<div class="blendpath"><input type="text" id="blendpath" placeholder="Or paste where Blender is, e.g. C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe"><button type="button" data-blend="set">Connect</button></div>`;
+ loadStyles();}
+document.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.blend;if(!k)return;e.target.disabled=true;
+ blender(k==='set'?{path:$('#blendpath').value}:k==='forget'?{forget:true}:{look:true});});
 document.addEventListener('click',async e=>{if(e.target.id!=='getmodel')return;e.target.disabled=true;
  const r=await fetch('/api/model/install',{method:'POST',body:'{}'});if(r.ok)model();});
-loadStyles();poll();model();music();
+loadStyles();poll();model();music();blender();
 </script></body></html>"""

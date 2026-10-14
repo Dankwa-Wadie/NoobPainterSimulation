@@ -58,14 +58,19 @@ class PlaybackTest(unittest.TestCase):
 
 
 class DescriptionTest(unittest.TestCase):
-    def test_says_it_is_simulated_and_asks_for_guesses(self):
+    def test_says_it_is_simulated_and_asks_no_guesses_by_default(self):
         text = painting.describe("a fox", "van_gogh", None)
         self.assertIn("not a human artist", text)
-        self.assertIn("guess", text.lower())
+        self.assertNotIn("guess", text.lower())             # the guessing games are off
         self.assertIn("Van Gogh", text)
+        self.assertNotIn("fox", text)
+
+    def test_the_old_shorts_description_still_asks_for_guesses(self):
+        text = painting.describe("a fox", "van_gogh", None, shorts=True)
+        self.assertIn("guess", text.lower())
         self.assertNotIn("fox", text)                       # the answer stays out
-        self.assertIn("carved", painting.describe("an owl", "relief_wood", None))
-        self.assertIn("drawn", painting.describe("an owl", "maze", None))
+        self.assertIn("carved", painting.describe("an owl", "relief_wood", None).lower())
+        self.assertIn("drawn", painting.describe("an owl", "maze", None).lower())
 
 
 class HiddenSubjectTest(unittest.TestCase):

@@ -24,6 +24,7 @@ import os
 import logging
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -33,15 +34,72 @@ from PIL import Image, ImageFilter
 LOG = logging.getLogger("mken.carving")
 ROOT = Path(__file__).resolve().parent
 SCENE = ROOT / "relief_scene.py"
-def _default_blender() -> str:
-    if os.name == "nt":                     # the newest Blender in Program Files
-        found = sorted(Path(os.environ.get("ProgramFiles", r"C:\Program Files")).glob(
-            "Blender Foundation/Blender*/blender.exe"))
-        return str(found[-1]) if found else "blender"
-    return "/Applications/Blender.app/Contents/MacOS/Blender"
+SETTINGS = ROOT.parent / "settings.json"     # this computer's own choices (not in git)
 
 
-BLENDER = Path(os.environ.get("NOOBPAINTER_BLENDER", _default_blender()))
+def _saved() -> dict[str, Any]:
+    try:
+        return json.loads(SETTINGS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_blender(path: str | None) -> None:
+    """Remember where Blender is (None: forget it, and look in the usual places)."""
+    s = _saved()
+    if path:
+        s["blender"] = str(path)
+    else:
+        s.pop("blender", None)
+    SETTINGS.write_text(json.dumps(s, indent=1), encoding="utf-8")
+
+
+def _usual_places() -> list[Path]:
+    """Where Blender usually lives, newest first where several versions sit side by side."""
+    import shutil
+    places: list[Path] = []
+    if os.name == "nt":
+        for root in {os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramW6432", ""),
+                     os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")}:
+            if root:
+                places += sorted(Path(root).glob("Blender Foundation/Blender*/blender.exe"), reverse=True)
+        steam = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Steam/steamapps/common/Blender/blender.exe"
+        places.append(steam)
+    elif sys.platform == "darwin":
+        places += [Path("/Applications/Blender.app/Contents/MacOS/Blender"),
+                   Path.home() / "Applications/Blender.app/Contents/MacOS/Blender"]
+    else:
+        places += [Path("/snap/bin/blender"), Path("/usr/bin/blender"), Path("/usr/local/bin/blender")]
+        places += sorted(Path.home().glob("blender*/blender"), reverse=True)
+    which = shutil.which("blender")
+    if which:
+        places.append(Path(which))
+    return places
+
+
+def find_blender() -> Path | None:
+    """Blender, looked for afresh each time (installed after the app opened is found):
+    NOOBPAINTER_BLENDER, then the place saved in the app, then the usual places."""
+    for p in [os.environ.get("NOOBPAINTER_BLENDER"), _saved().get("blender")]:
+        if p and Path(p).is_file():
+            return Path(p)
+    return next((p for p in _usual_places() if p.is_file()), None)
+
+
+def blender_version(path: Path | str) -> str | None:
+    """'Blender 4.2.1' if `path` runs as Blender, else None."""
+    p = Path(path)
+    if p.suffix == ".app":                        # macOS: the app bundle, not its program
+        p = p / "Contents/MacOS/Blender"
+    if not p.is_file():
+        return None
+    try:
+        out = subprocess.run([str(p), "-b", "--factory-startup", "--version"], capture_output=True,
+                             text=True, encoding="utf-8", errors="replace", timeout=60).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    line = next((ln.strip() for ln in out.splitlines() if ln.strip().startswith("Blender ")), None)
+    return line.split(" (")[0] if line else None
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 
 # (name, radius in canvas units, margin left above the target, most strokes, s of hand time a unit)
@@ -327,7 +385,11 @@ def carve(picture: Path | str, out_dir: Path | str, cfg: dict[str, Any]) -> dict
     job = {"heights": [s for s, _ in shots], "out_dir": str(frames), "size": size,
            "material": cfg.get("material", "wood"), "depth": float(cfg.get("relief", 0.18))}
     (out / "blender-job.json").write_text(json.dumps(job), encoding="utf-8")
-    blender = subprocess.Popen([str(BLENDER), "-b", "--factory-startup", "-P", str(SCENE), "--",
+    found = find_blender()
+    if not found:
+        raise RuntimeError("Blender isn't installed, or can't be found: get it free from "
+                           "blender.org, then connect it in the app (or set NOOBPAINTER_BLENDER)")
+    blender = subprocess.Popen([str(found), "-b", "--factory-startup", "-P", str(SCENE), "--",
                                 str(out / "blender-job.json")],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
     for line in blender.stdout:

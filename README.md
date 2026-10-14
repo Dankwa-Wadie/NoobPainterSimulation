@@ -1,7 +1,7 @@
 # NoobPainterSimulation
 
 Pictures painted, drawn, carved and animated **stroke by stroke**, by a simulation, and
-turned into short vertical videos you can watch being made.
+turned into videos you can watch being made, in your picture's own shape.
 
 It is not a filter. A real paint simulator mixes paint from named tubes, pushes it
 around with bristles, and lets it dry; this project decides, stroke by stroke, where a
@@ -61,10 +61,10 @@ it paints. A painting takes a few thousand strokes.
 **4. Every stroke is recorded.** Where it went and when. That is how the video can follow
 the brush (and, with `--hand`, show a hand moving exactly along each stroke).
 
-**5. It's cut into a short video.** It opens on the finished picture blurred — *"Guess
-what I'm painting"* — then a close-up camera follows the brush, so you see strokes but not
-the whole picture; the subject is painted last; the camera pulls back for the reveal.
-Calm public-domain classical music plays underneath.
+**5. It's cut into a video.** A close-up camera follows the brush, so you watch the strokes
+go down; the subject is painted last; then the camera pulls back to reveal the whole
+picture, and holds on it. The video keeps your picture's shape (landscape, portrait or
+square). Music is up to you: calm public-domain classical, your own, or none.
 
 ### Other materials, same idea
 - **Pencil** — simulated pencils of different softness; shading ruled line by line against a ruler, crossing like an engraving.
@@ -126,8 +126,19 @@ It does everything, so you don't need to clone the repo yourself:
 - puts a **NoobPainterSimulation** launcher on your desktop;
 - opens the app.
 
-Run the same line again to update. Works on macOS (Apple Silicon or Intel) and Linux;
-on Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) (Ubuntu) and run it there.
+Run the same line again to update: it keeps what you've already downloaded (the music,
+the image model) and doesn't ask for it again. Works on macOS (Apple Silicon or Intel) and Linux.
+
+**On Windows**, open PowerShell (Start menu, type *PowerShell*) and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/Dankwa-Wadie/NoobPainterSimulation/main/install.ps1 | iex
+```
+
+It installs what's missing with winget (Git, Python, ffmpeg, Rust and the C++ build tools
+Rust needs; Windows may ask for permission), then does the same as above, into
+`%USERPROFILE%\NoobPainterSimulation`. The one-click image-model install is for macOS and
+Linux for now.
 
 Afterwards, open the app any time by double-clicking **NoobPainterSimulation** on your
 desktop (on Windows it is in the Start menu too). It opens in your browser; keep the
@@ -166,8 +177,12 @@ or more. About 3 minutes a picture on an Apple Silicon Mac. Files and sources:
 ### Optional: Blender
 
 The carving styles (`relief_wood`, `relief_marble`, `relief_clay`) render in
-[Blender](https://www.blender.org/download/) (free). The installer looks for it in
-`/Applications`; set `NOOBPAINTER_BLENDER` if it lives elsewhere.
+[Blender](https://www.blender.org/download/) (free). You can install it any time, even
+after this project: the app looks for it in the usual places each time (Applications on
+macOS, Program Files on Windows, the system path on Linux). Choose a carving style and the
+app shows whether Blender is connected; press **Look again** after installing it, or paste
+where it is and press **Connect**. The location is remembered in `settings.json`. From the
+command line, `NOOBPAINTER_BLENDER` points at it too.
 
 ### By hand (if you prefer)
 
@@ -186,18 +201,22 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui   # opens http://127.0.0.1:8770
 ```
 
-Drop in a picture (several for Oil paint (moving): put them in order with the arrows on
-their thumbnails; or a short clip for the moving styles), pick a style from the
-preview cards, and choose what to make: **the painting video** (pick its length and
-whether to show a hand) or **just the finished picture**, which is quicker and is a PNG
-to download. Every style keeps your picture's shape: a landscape photo makes a landscape
-video (from a typed idea, it's a 9:16 Short). The moving and ink styles are videos only.
+Pick a style from the preview cards and drop in what it takes:
+- **one picture** for most styles (a new one replaces the last);
+- **several pictures, up to 8,** for Oil paint (moving): they become its poses, in order
+  (reorder them with the arrows on their thumbnails);
+- **a picture or a short video clip** for Van Gogh (moving) and Oil paint (moving), which
+  repaint it frame by frame. The other styles don't take video.
+
+Then choose what to make: **the painting video** (pick its length and whether to show a
+hand) or **just the finished picture**, which is quicker and is a PNG to download. Every
+style keeps your picture's shape: a landscape photo makes a landscape video (from a typed
+idea, it's 9:16). The moving and ink styles are videos only.
 A video can have no music, the free calm classical music (download it from the app if the
 installer skipped it), or your own: choose a music file and it loops to the video's length.
 Press **Paint it**: progress, a live view of the canvas and the finished video (with its
-finished picture to download too) or picture appear on the page. In the app a video is
-just the painting and its reveal: the "Guess what I'm painting" teaser and ending are for
-YouTube Shorts made from the command line. It runs on your computer only.
+finished picture to download too) or picture appear on the page. It runs on your
+computer only.
 
 **The command line:**
 
@@ -207,7 +226,7 @@ python -m noobpainter paint photo.jpg --style van_gogh --out out/my-painting
 python -m noobpainter paint photo.jpg --style pencil --hand    # with the hand overlay
 python -m noobpainter paint photo.jpg --style van_gogh --picture-only   # just the picture, no video
 python -m noobpainter paint portrait.png --style bizarre_manga
-python -m noobpainter paint photo.jpg --style relief_wood      # carved (Blender)
+python -m noobpainter paint photo.jpg --style relief_wood      # carved (needs Blender)
 python -m noobpainter paint --video clip.mp4 --style anim_van_gogh
 python -m noobpainter paint pose1.jpg pose2.jpg pose3.jpg --style anim_oil_morph   # poses, looped
 ```
@@ -226,7 +245,7 @@ description and the music's licence) into the output folder.
 |---|---|
 | `noobpainter/brushwork.py` | plans the strokes: layers, colours, directions, style presets |
 | `noobpainter/oilpaint.py` | paint mixing and swatch calibration |
-| `noobpainter/handplay.py` | the video: camera, teaser, reveal, compass/ruler, optional hand, music |
+| `noobpainter/handplay.py` | the video: camera, reveal, compass/ruler, optional hand, music |
 | `noobpainter/lineart.py` | maze, waves, continuous line, compass spiral |
 | `noobpainter/carving.py`, `relief_scene.py` | carving and clay moulding, rendered in Blender |
 | `noobpainter/paintanim.py` | moving paintings, and repainting a clip frame by frame |

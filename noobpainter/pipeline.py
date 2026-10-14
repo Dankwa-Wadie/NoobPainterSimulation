@@ -26,9 +26,10 @@ DEFAULTS: dict[str, Any] = {
     "upside_down_every": 4,     # one painting in this many is painted upside down (0: never)
     "playback": True,           # False: just the finished picture, no video (painted styles only)
     "music": "library",         # handplay.choose_music: "library", "none" or a file of one's own
-    # The YouTube Short's games: the "Guess what I'm painting" teaser, "Did you guess it?"
-    # and the odd painting done upside down. The app turns them off: there it's your picture.
-    "shorts": True,
+    # The old YouTube Shorts games: the "Guess what I'm painting" teaser, "Did you guess it?"
+    # and the odd painting done upside down. Off: a video is just the painting and its
+    # reveal (the app and the command line alike); True brings them back.
+    "shorts": False,
 }
 
 # Styles that are a video by nature: the moving paintings, and the ink pages (the comic
@@ -61,10 +62,17 @@ def shape_of(picture: Path | str, long_side: int) -> tuple[int, int]:
     return max(2, round(w * s / 2) * 2), max(2, round(h * s / 2) * 2)
 
 
-def title_for(style: str, seed: int) -> str:
+PLAIN_TITLES = {"oil": "Painted stroke by stroke 🎨", "pencil": "Drawn line by line ✏️",
+                "compass": "Drawn as one spiral 🌀", "pen": "Drawn in one pen line 🖊️",
+                "carving": "Carved cut by cut 🪵", "moulding": "Sculpted from clay 🏺"}
+
+
+def title_for(style: str, seed: int, shorts: bool = False) -> str:
     import brushwork
     st = brushwork.settings({"brushwork": {"style": style}})
     medium = "moulding" if st.get("process") == "mould" else st.get("medium", "oil")
+    if not shorts:
+        return PLAIN_TITLES.get(medium, PLAIN_TITLES["oil"])
     options = TITLES.get(medium, TITLES["oil"])
     return options[seed % len(options)]
 
@@ -91,7 +99,7 @@ def reference(idea: str, style: str, config: dict[str, Any], out: Path, seed: in
     return out
 
 
-def describe(idea: str, style: str, music: Path | None) -> str:
+def describe(idea: str, style: str, music: Path | None, shorts: bool = False) -> str:
     """The description: what it is, how it was made, and the music's licence."""
     import handplay
     credit = ""
@@ -118,6 +126,8 @@ def describe(idea: str, style: str, music: Path | None) -> str:
         "carving": ("Carved cut by cut from a simulated block, rendered in 3D", "carved",
                     "#carving #woodcarving"),
     }.get(medium, ("Made by a computer simulation", "made", "#art"))
+    if not shorts:
+        return f"{made} ({label} style), not a human artist.{credit}\n\n{tags}"
     return (f"Guess what's being {verb} before the end! Drop your guess in the comments.\n\n"
             f"{made} ({label} style), not a human artist."
             f"{credit}\n\n{tags} #guesstheart #shorts")
@@ -186,8 +196,8 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
         video_out = out / "painting.mp4"
         handplay.render(painted / "frames", painted / "strokes.json", video_out, float(cfg["seconds"]),
                         (int(cfg["width"]), int(cfg["height"])), music, config=play)
-        title = title_for(style, seed)
-        desc = describe(idea, style, music)
+        title = title_for(style, seed, bool(cfg["shorts"]))
+        desc = describe(idea, style, music, bool(cfg["shorts"]))
         (out / "credits.txt").write_text(f"{title}\n\n{desc}\n", encoding="utf-8")
         image = _still(painted, out)
         if not cfg["keep_frames"]:
