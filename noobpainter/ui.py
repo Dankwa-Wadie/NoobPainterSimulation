@@ -34,8 +34,32 @@ NOTES = {"relief_wood": "carved in Blender", "relief_marble": "carved in Blender
          "relief_clay": "moulded in Blender", "anim_van_gogh": "takes a picture or a clip",
          "anim_oil_morph": "takes a picture or a clip"}
 
+AUDIO = {".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".flac", ".opus"}
+
 _job: dict = {}
 _model: dict = {"status": "idle", "log": []}
+_music: dict = {"status": "idle", "log": []}
+
+
+def music_state() -> dict:
+    """Whether the optional classical library has been fetched, and any fetch's progress."""
+    import handplay
+    have = any(handplay.MUSIC.glob("*.m4a")) and (handplay.MUSIC / "manifest.json").exists()
+    return {"installed": have, "install": _music.get("status"), "log": _music.get("log", [])[-8:]}
+
+
+def _fetch_music() -> None:
+    """tools/fetch_classical.py, as the installer runs it (about 500 MB with its voice check)."""
+    import subprocess
+    import sys
+    _music.update(status="running", log=[])
+    proc = subprocess.Popen([sys.executable, str(ROOT / "tools" / "fetch_classical.py")], cwd=ROOT,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    for line in proc.stdout:
+        line = line.rstrip().split("\r")[-1]
+        if line:
+            _music["log"] = (_music["log"] + [line])[-40:]
+    _music["status"] = "done" if proc.wait() == 0 else "failed"
 
 
 def model_state() -> dict:
@@ -62,19 +86,37 @@ def _install_model() -> None:
     _model["status"] = "done" if proc.wait() == 0 else "failed"
 
 
+# What the hand holds, by the style's playback hand (handplay: assets/hand/<name>.json)
+HAND_TOOL = {"": "the brush", "pencil": "the pencil", "pen": "the pen",
+             "carving": "the carving tool", "mould": "the modelling tool"}
+
+
+def hand_tool(st: dict) -> str | None:
+    """What a hand would hold in this style's video, or None when it has no hand (the
+    compass draws on its own)."""
+    import handplay
+    which = str((st.get("playback") or {}).get("hand") or "")
+    if which == "none" or which not in HAND_TOOL:
+        return None
+    return HAND_TOOL[which] if handplay.HAND.with_name(f"{which or 'hand'}.json").exists() else None
+
+
 def styles() -> list[dict]:
     rows = []
     for name, st in brushwork.STYLES.items():
         medium = st.get("medium", "oil")
         if st.get("process") == "mould":
             medium = "carving"
-        rows.append({"name": name, "medium": MEDIUM_LABEL.get(medium, medium),
+        rows.append({"name": name, "medium": MEDIUM_LABEL.get(medium, medium), "video_only": False,
+                     "hand": hand_tool(st),
                      "note": NOTES.get(name, ""), "preview": (PREVIEWS / f"{name}.gif").exists()})
     for name in ("anim_van_gogh", "anim_oil_morph"):
-        rows.append({"name": name, "medium": MEDIUM_LABEL["animation"], "note": NOTES[name],
+        rows.append({"name": name, "medium": MEDIUM_LABEL["animation"], "note": NOTES[name], "video_only": True,
+                     "hand": None,
                      "preview": (PREVIEWS / f"{name}.gif").exists()})
     for name, note in (("bizarre_manga", "inked, then coloured"), ("comic_halftone", "dots, then a slow blur")):
-        rows.append({"name": name, "medium": "Ink", "note": note,
+        rows.append({"name": name, "medium": "Ink", "note": note, "video_only": True,
+                     "hand": "the pencil, then the pen" if name == "bizarre_manga" else None,
                      "preview": (PREVIEWS / f"{name}.gif").exists()})
     rows.sort(key=lambda r: r["name"] != "contemporary")     # the default first
     return rows
@@ -84,10 +126,12 @@ def _run(job: dict) -> None:
     import pipeline
     try:
         res = pipeline.make(job["idea"], job["style"], job["out"],
-                            {"painting": {"seconds": job["seconds"]},
+                            {"painting": {"seconds": job["seconds"], "playback": job["playback"],
+                                          "music": job["music"], "shorts": False},
                              "handplay": {"hand_overlay": job["hand"]}},
                             picture=job.get("picture"), video=job.get("video"))
-        job.update(status="done", video=str(res["video"]), title=res.get("title", ""),
+        job.update(status="done", video=str(res["video"]) if res.get("video") else None,
+                   image=str(res["image"]) if res.get("image") else None, title=res.get("title", ""),
                    description=res.get("description", ""))
     except Exception as e:                                    # noqa: BLE001 - shown on the page
         job.update(status="failed", error=f"{e}")
@@ -123,6 +167,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"styles": styles()})
         if url.path == "/api/model":
             return self._json(200, model_state())
+        if url.path == "/api/music":
+            return self._json(200, music_state())
         if url.path == "/api/job":
             state = progress.snapshot()
             data = {k: _job.get(k) for k in ("status", "style", "error", "title", "description")}
@@ -131,8 +177,9 @@ class Handler(BaseHTTPRequestHandler):
                 data["preview"] = "/out/" + str(Path(state["preview"]).resolve().relative_to(OUT.resolve())) \
                     if Path(state["preview"]).resolve().is_relative_to(OUT.resolve()) else None
                 data["preview_at"] = state.get("preview_at")
-            if _job.get("video"):
-                data["video"] = "/out/" + str(Path(_job["video"]).resolve().relative_to(OUT.resolve()))
+            for key in ("video", "image"):
+                if _job.get(key):
+                    data[key] = "/out/" + str(Path(_job[key]).resolve().relative_to(OUT.resolve()))
             return self._json(200, data)
         if url.path.startswith("/previews/"):
             return self._file(PREVIEWS / urllib.parse.unquote(url.path[len("/previews/"):]), PREVIEWS)
@@ -148,14 +195,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400, {"error": "empty or too large (500 MB at most)"})
             name = urllib.parse.parse_qs(url.query).get("name", ["file"])[0]
             ext = Path(name).suffix.lower()
-            if ext not in {".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov", ".m4v", ".webm"}:
-                return self._json(400, {"error": "a picture (PNG, JPEG, WEBP) or a video (MP4, MOV, WEBM)"})
+            if ext not in {".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov", ".m4v", ".webm", *AUDIO}:
+                return self._json(400, {"error": "a picture (PNG, JPEG, WEBP), a video (MP4, MOV, WEBM) "
+                                                 "or music (MP3, M4A, WAV, OGG, FLAC)"})
             data = self.rfile.read(length)
             UPLOADS.mkdir(parents=True, exist_ok=True)
             dst = UPLOADS / f"{hashlib.sha1(data).hexdigest()[:16]}{ext}"
             dst.write_bytes(data)
-            kind = "video" if ext in {".mp4", ".mov", ".m4v", ".webm"} else "picture"
+            kind = ("video" if ext in {".mp4", ".mov", ".m4v", ".webm"} else
+                    "audio" if ext in AUDIO else "picture")
             return self._json(200, {"file": dst.name, "kind": kind})
+        if url.path == "/api/music/install":
+            if _music.get("status") == "running":
+                return self._json(409, {"error": "already downloading"})
+            threading.Thread(target=_fetch_music, daemon=True).start()
+            return self._json(200, {"ok": True})
         if url.path == "/api/model/install":
             if _model.get("status") == "running":
                 return self._json(409, {"error": "already installing"})
@@ -178,13 +232,29 @@ class Handler(BaseHTTPRequestHandler):
             idea = str(b.get("idea", "")).strip()[:300]
             if not upload and not idea:
                 return self._json(400, {"error": "choose a picture or describe an idea"})
+            if upload and upload.suffix.lower() in AUDIO:
+                return self._json(400, {"error": "that's music: add it under Music, and choose a picture to paint"})
             is_video = bool(upload and upload.suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"})
             if is_video and not style.startswith("anim_"):
                 return self._json(400, {"error": "a video clip needs a Moving painting style"})
+            import pipeline
+            playback = b.get("playback", True) is not False
+            if not playback and (style in pipeline.VIDEO_ONLY or is_video):
+                return self._json(400, {"error": "this style is only made as a video: choose "
+                                                 "\"The painting video\", or another style"})
+            music = str(b.get("music") or "none")
+            if music == "own":
+                own = UPLOADS / Path(str(b.get("music_file", ""))).name
+                if not (b.get("music_file") and own.exists() and own.suffix.lower() in AUDIO):
+                    return self._json(400, {"error": "choose your music file again"})
+                music = str(own)
+            elif music not in ("none", "library"):
+                return self._json(400, {"error": "bad music choice"})
             out = OUT / dt.datetime.now().strftime("%Y%m%d-%H%M%S")
             _job.clear()
             _job.update(status="running", style=style, idea=idea or "a picture", out=out,
                         seconds=max(10.0, min(90.0, float(b.get("seconds", 30)))), hand=bool(b.get("hand")),
+                        playback=playback, music=music,
                         picture=None if is_video else upload, video=upload if is_video else None)
             threading.Thread(target=_run, args=(_job,), daemon=True).start()
             return self._json(200, {"ok": True})
@@ -249,7 +319,7 @@ button.go{margin-top:18px;width:100%;padding:13px;border:0;border-radius:11px;ba
 .status{display:flex;justify-content:space-between;gap:10px}.muted{color:var(--muted)}.err{color:#c4372b}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;max-height:170px;overflow:auto;font-size:12px;white-space:pre-wrap}
 .model{margin-top:8px;font-size:13px;color:var(--muted)}.model button{margin-left:6px;padding:5px 10px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;cursor:pointer}.model pre{max-height:110px}.model a{color:var(--accent)}
-.result video,.live img{width:100%;max-height:520px;object-fit:contain;border-radius:10px;background:#000}.live img{background:var(--bg)}
+.result video,.result img,.live img{width:100%;max-height:520px;object-fit:contain;border-radius:10px;background:#000}.live img{background:var(--bg)}
 a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 </style></head><body><main>
 <h1>NoobPainterSimulation</h1><p class="sub">Pictures painted, drawn and carved stroke by stroke, by a simulation. Runs on this computer only.</p>
@@ -263,9 +333,19 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
   <div class="model" id="model"></div>
   <h2 style="margin-top:20px">2 · Style</h2>
   <div class="styles" id="styles"></div>
-  <h2 style="margin-top:20px">3 · Options</h2>
-  <div class="row"><label for="secs">Length (seconds)</label><input type="number" id="secs" min="10" max="90" value="30" style="width:90px">
-   <label><input type="checkbox" id="hand"> Show a hand holding the brush</label></div>
+  <h2 style="margin-top:20px">3 · What to make</h2>
+  <div class="row" id="make"><label><input type="radio" name="make" value="video" checked> The painting video <span class="muted">(watch it painted, stroke by stroke)</span></label>
+   <label><input type="radio" name="make" value="picture"> Just the finished picture <span class="muted">(faster)</span></label></div>
+  <p class="muted" id="makenote"></p>
+  <div class="row" id="videoopts"><label for="secs">Length (seconds)</label><input type="number" id="secs" min="10" max="90" value="30" style="width:90px">
+   <label id="handlabel"><input type="checkbox" id="hand"> Show a hand holding <span id="handtool">the brush</span></label></div>
+  <p class="muted" id="handnote"></p>
+  <div id="musicopts"><h2 style="margin-top:20px">4 · Music</h2>
+   <div class="row"><label><input type="radio" name="music" value="none" checked> No music</label>
+    <label><input type="radio" name="music" value="library" id="mlib"> Calm classical <span class="muted">(free, built in)</span></label>
+    <label><input type="radio" name="music" value="own" id="mown"> My own music</label></div>
+   <div class="model" id="musicnote"></div>
+   <input type="file" id="musicfile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" hidden></div>
   <button class="go" id="go">Paint it</button><p class="err" id="formerr"></p>
  </section>
  <section class="panel">
@@ -279,13 +359,41 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 <script>
 const $=s=>document.querySelector(s);let upload=null,style='contemporary',lastPreview=0;
 const NAMES={anim_van_gogh:'Van Gogh (moving)',anim_oil_morph:'Oil paint (moving)',bw_exaggerated:'B&W exaggerated',compass_spiral:'Compass spiral',relief_wood:'Relief: wood',relief_marble:'Relief: marble',relief_clay:'Relief: clay',old_master:'Old Master',van_gogh:'Van Gogh',bizarre_manga:'Bizarre manga',comic_halftone:'Comic halftone'};
+let styleRows=[];const pictureOnly=()=>document.querySelector('input[name=make]:checked').value==='picture';
+// "just the picture" has no video options, and the moving and ink styles are videos by nature
+function syncMake(){const p=pictureOnly(),row=styleRows.find(r=>r.name===style);
+ $('#videoopts').style.display=p?'none':'';$('#musicopts').style.display=p?'none':'';
+ $('#makenote').textContent=p&&row&&row.video_only?`${nice(style)} is only made as a video: choose another style for a picture.`:'';
+ $('#go').textContent=p?'Paint the picture':'Paint it';
+ // not every style has a hand: the compass draws alone, the moving and halftone styles have none
+ const tool=row?row.hand:'the brush';$('#hand').disabled=!tool;if(!tool)$('#hand').checked=false;
+ $('#handlabel').style.opacity=tool?'':'.5';$('#handtool').textContent=tool||'a tool';
+ $('#handnote').textContent=tool?'':`${nice(style)} has no hand to show.`;}
+document.querySelectorAll('input[name=make]').forEach(r=>r.onchange=syncMake);
+let ownMusic=null,musicLib=false;
+const musicChoice=()=>document.querySelector('input[name=music]:checked').value;
+async function music(){const r=await fetch('/api/music');const m=await r.json();musicLib=m.installed;const el=$('#musicnote');
+ $('#mlib').disabled=!m.installed;if(!m.installed&&musicChoice()==='library')document.querySelector('input[name=music][value=none]').checked=true;
+ if(m.install==='running'){el.innerHTML=`Downloading the classical music (about 500 MB)…<pre>${(m.log||[]).join('\n')}</pre>`;setTimeout(music,3000);return;}
+ const mine=ownMusic?`Your music: ${ownMusic.name.replace(/[<>&]/g,'')} <button type="button" id="changemusic">Change</button>`:'';
+ if(m.installed){el.innerHTML=mine;return;}
+ el.innerHTML=(m.install==='failed'?'<span class="err">The download stopped — press again to resume.</span> ':'')+
+  `The calm classical music isn't downloaded yet (about 500 MB, free).<button type="button" id="getmusic">Download it</button>`+(mine?'<br>'+mine:'');}
+document.querySelectorAll('input[name=music]').forEach(r=>r.onchange=()=>{if(r.value==='own'&&r.checked&&!ownMusic)$('#musicfile').click();});
+$('#musicfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('#formerr').textContent='';$('#musicnote').textContent='Uploading your music…';
+ const r=await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();
+ if(!r.ok||j.kind!=='audio'){$('#formerr').textContent=j.error||'That isn\'t a music file';ownMusic=null;document.querySelector('input[name=music][value=none]').checked=true;music();return;}
+ ownMusic={file:j.file,name:f.name};$('#mown').checked=true;music();};
+document.addEventListener('click',async e=>{if(e.target.id!=='getmusic')return;e.target.disabled=true;
+ const r=await fetch('/api/music/install',{method:'POST',body:'{}'});if(r.ok)music();});
+document.addEventListener('click',e=>{if(e.target.id==='changemusic')$('#musicfile').click();});
 const nice=n=>NAMES[n]||n.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-async function loadStyles(){const r=await fetch('/api/styles');const j=await r.json();
- $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}-final.jpg" data-still="/previews/${s.name}-final.jpg" data-play="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}</small></button>`).join('');}
+async function loadStyles(){const r=await fetch('/api/styles');const j=await r.json();styleRows=j.styles;
+ $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}-final.jpg" data-still="/previews/${s.name}-final.jpg" data-play="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}</small></button>`).join('');syncMake();}
 // the finished piece as a still; the preview of its making plays on hover
 $('#styles').addEventListener('mouseover',e=>{const i=e.target.closest('.card')?.querySelector('img');if(i&&i.dataset.play&&i.src.indexOf('.gif')<0)i.src=i.dataset.play;});
 $('#styles').addEventListener('mouseout',e=>{const c=e.target.closest('.card');if(!c||c.contains(e.relatedTarget))return;const i=c.querySelector('img');if(i&&i.dataset.still)i.src=i.dataset.still;});
-$('#styles').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;style=c.dataset.style;document.querySelectorAll('.card').forEach(x=>x.classList.toggle('on',x===c));});
+$('#styles').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;style=c.dataset.style;document.querySelectorAll('.card').forEach(x=>x.classList.toggle('on',x===c));syncMake();});
 const drop=$('#drop');drop.onclick=()=>$('#file').click();
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
 drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])send(e.dataTransfer.files[0]);};
@@ -293,11 +401,12 @@ $('#file').onchange=e=>{if(e.target.files[0])send(e.target.files[0]);};
 async function send(f){$('#formerr').textContent='';$('#dropview').textContent='Uploading…';
  const r=await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();
  if(!r.ok){$('#dropview').textContent='Drop a picture or a short video here, or click to choose';$('#formerr').textContent=j.error;return;}
+ if(j.kind==='audio'){$('#dropview').textContent='Drop a picture or a short video here, or click to choose';$('#formerr').textContent='That\'s music: add it under Music, below.';return;}
  upload=j;const url=URL.createObjectURL(f);
  $('#dropview').innerHTML=(j.kind==='video'?`<video src="${url}" muted autoplay loop playsinline></video>`:`<img src="${url}" alt="">`)+`<small>${f.name}</small>`;
- if(j.kind==='video'&&!style.startsWith('anim_')){style='anim_van_gogh';loadStyles();}}
+ if(j.kind==='video'&&!style.startsWith('anim_')){style='anim_van_gogh';document.querySelector('input[name=make][value=video]').checked=true;loadStyles();}}
 $('#go').onclick=async()=>{$('#formerr').textContent='';
- const body={style,idea:$('#idea').value,file:upload&&upload.file,seconds:+$('#secs').value,hand:$('#hand').checked};
+ const body={style,idea:$('#idea').value,file:upload&&upload.file,seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
  const r=await fetch('/api/paint',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
  if(!r.ok){$('#formerr').textContent=j.error;return;}$('#result').innerHTML='';poll();};
 async function poll(){const r=await fetch('/api/job');const j=await r.json();
@@ -306,7 +415,8 @@ async function poll(){const r=await fetch('/api/job');const j=await r.json();
  $('#pct').textContent=st?Math.floor(j.percent||0)+'%':'';$('#bar').style.width=(j.percent||0)+'%';$('#detail').textContent=j.error||j.detail||'';
  $('#log').textContent=(j.log||[]).join('\n');
  if(j.preview&&j.preview_at!==lastPreview&&st==='running'){lastPreview=j.preview_at;$('#live').innerHTML=`<img src="${j.preview}?t=${lastPreview}" alt="The canvas so far">`;}
- if(st==='done'&&j.video){$('#live').innerHTML='';$('#result').innerHTML=`<video src="${j.video}" controls autoplay playsinline></video><a class="dl" href="${j.video}" download>Download the video</a><p class="muted" style="white-space:pre-wrap">${(j.title||'')}</p>`;}
+ if(st==='done'&&j.video){$('#live').innerHTML='';$('#result').innerHTML=`<video src="${j.video}" controls autoplay playsinline></video><a class="dl" href="${j.video}" download="painting.mp4">Download the video</a>`+(j.image?` &nbsp; <a class="dl" href="${j.image}" download="painting.png">Download the picture</a>`:'');}
+ else if(st==='done'&&j.image){$('#live').innerHTML='';$('#result').innerHTML=`<img src="${j.image}" alt="The finished painting"><a class="dl" href="${j.image}" download="painting.png">Download the picture</a>`;}
  if(st==='running')setTimeout(poll,2000);}
 async function model(){const r=await fetch('/api/model');const m=await r.json();const el=$('#model');
  if(m.installed){el.innerHTML='✓ Local image model ready: ideas can be drawn on this computer.';$('#idea').disabled=false;return;}
@@ -316,5 +426,5 @@ async function model(){const r=await fetch('/api/model');const m=await r.json();
   `To paint from a typed idea, this computer needs a local image model (Qwen-Image, about 20 GB, free).<button type="button" id="getmodel">Install it</button> <a href="https://github.com/Dankwa-Wadie/NoobPainterSimulation#the-local-image-model-optional" target="_blank" rel="noopener">What is this?</a>`;}
 document.addEventListener('click',async e=>{if(e.target.id!=='getmodel')return;e.target.disabled=true;
  const r=await fetch('/api/model/install',{method:'POST',body:'{}'});if(r.ok)model();});
-loadStyles();poll();model();
+loadStyles();poll();model();music();
 </script></body></html>"""

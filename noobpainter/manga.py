@@ -269,7 +269,7 @@ def render(picture: Path, out: Path, config: dict[str, Any] | None = None, music
            "-r", str(fps), "-i", "-"]
     if music:
         import handplay
-        cmd += ["-ss", f"{handplay.music_start(music):.2f}", "-i", str(music), "-filter_complex",
+        cmd += ["-stream_loop", "-1", "-ss", f"{handplay.music_start(music):.2f}", "-i", str(music), "-filter_complex",
                 f"[1:a]atrim=0:{total:.2f},asetpts=PTS-STARTPTS,afade=t=in:d=1.0,"
                 f"afade=t=out:st={max(0, total - 2.5):.2f}:d=2.5,loudnorm=I=-16:TP=-1.5:LRA=11[a]",
                 "-map", "0:v", "-map", "[a]", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]

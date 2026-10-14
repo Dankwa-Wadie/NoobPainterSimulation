@@ -20,6 +20,10 @@ def main() -> int:
     p.add_argument("--seconds", type=float, default=45.0)
     p.add_argument("--hand", action="store_true",
                    help="show a hand holding the brush/pencil/tool on every stroke")
+    p.add_argument("--music", default="library",
+                   help='"library" (calm classical, if fetched), "none", or a music file of your own')
+    p.add_argument("--picture-only", action="store_true",
+                   help="just the finished picture (painting.png), no video; faster")
     sub.add_parser("styles", help="list the styles")
     u = sub.add_parser("ui", help="open the web app (local only)")
     u.add_argument("--port", type=int, default=8770)
@@ -39,10 +43,11 @@ def main() -> int:
     if not (a.picture or a.idea or a.video):
         ap.error("give a picture, an --idea or a --video")
     import pipeline
-    res = pipeline.make(a.idea, a.style, a.out, {"painting": {"seconds": a.seconds},
+    res = pipeline.make(a.idea, a.style, a.out, {"painting": {"seconds": a.seconds, "playback": not a.picture_only,
+                                                              "music": a.music},
                                                  "handplay": {"hand_overlay": a.hand}},
                         picture=a.picture, video=a.video)
-    print(res["video"])
+    print(res.get("video") or res["image"])
     return 0
 
 

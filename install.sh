@@ -5,9 +5,9 @@
 #
 # It installs what's missing (git, Python 3, ffmpeg, Rust), downloads this project
 # into ~/NoobPainterSimulation, sets up its Python environment, builds the paint
-# engine, fetches the music, and offers the optional local image model (~20 GB).
+# engine, and offers the optional music (~500 MB) and local image model (~20 GB).
 #
-# Options (set before `bash`):  NOOBPAINTER_DIR=~/somewhere   WITH_IMAGE_MODEL=yes|no
+# Options (set before `bash`):  NOOBPAINTER_DIR=~/somewhere   WITH_IMAGE_MODEL=yes|no   WITH_MUSIC=yes|no
 set -euo pipefail
 
 # Everything is inside main(), run on the last line: bash reads the whole script before
@@ -66,8 +66,18 @@ say "Setting up Python (a private environment in $DIR/.venv)"
 say "Building the paint engine (a few minutes, the first time)"
 ./setup.sh
 
-say "Fetching the music (free public-domain recordings)"
-.venv/bin/python tools/fetch_classical.py || echo "  (music skipped; videos will be silent until you run tools/fetch_classical.py)"
+# The music is optional: videos can have none, or your own (chosen in the app)
+choice="${WITH_MUSIC:-ask}"
+if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then
+  printf '\nDownload the free calm classical music for the videos? About 500 MB.\n'
+  printf 'Without it, videos can be silent or use your own music. You can also get it later in the app. [y/N] '
+  read -r answer < /dev/tty || answer=n
+  case "$answer" in [yY]*) choice=yes ;; *) choice=no ;; esac
+fi
+if [ "$choice" = "yes" ]; then
+  say "Fetching the music (free public-domain recordings)"
+  .venv/bin/python tools/fetch_classical.py || echo "  (music skipped; you can get it later in the app)"
+fi
 
 choice="${WITH_IMAGE_MODEL:-ask}"
 if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then

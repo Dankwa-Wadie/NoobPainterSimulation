@@ -148,3 +148,86 @@ class AliveTest(unittest.TestCase):
         near = np.abs(moved[:, 70:115] - still[:, 70:115]).mean()
         self.assertGreater(near, 0)
         self.assertAlmostEqual(far, near, delta=near * 0.5)  # both halves move, opposite ways
+
+
+class PictureOnlyTest(unittest.TestCase):
+    def test_the_picture_is_graded_like_the_video_and_the_frames_go(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            painted = Path(td) / "painted"
+            (painted / "frames").mkdir(parents=True)
+            (painted / "frames" / "f.png").write_bytes(b"x")
+            Image.new("RGB", (8, 8), (100, 100, 100)).save(painted / "painting.png")
+            grade = [20, 220, 1.0]
+            (painted / "strokes.json").write_text(json.dumps({"grade": grade}))
+            res = painting._picture_only(painted, Path(td), "van_gogh", owns=False)
+            got = Image.open(res["image"]).getpixel((0, 0))
+            self.assertEqual(got, (brushwork.grade_lut(grade)[100],) * 3)
+            self.assertFalse((painted / "frames").exists())
+            self.assertNotIn("video", res)
+
+    def test_video_only_styles_refuse_a_picture(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            for style in painting.VIDEO_ONLY:
+                with self.assertRaises(ValueError):
+                    painting.make("a cat", style, td, {"painting": {"playback": False}})
+
+
+class MusicChoiceTest(unittest.TestCase):
+    def test_none_own_and_library(self):
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            own = Path(td) / "song.mp3"
+            own.write_bytes(b"x")
+            self.assertIsNone(handplay.choose_music(30, 0, {"painting": {"music": "none"}}))
+            self.assertEqual(handplay.choose_music(30, 0, {"painting": {"music": str(own)}}), own)
+            self.assertIsNone(handplay.choose_music(30, 0, {"painting": {"music": str(own) + "x"}}))
+            with mock.patch.object(handplay, "pick_music", return_value=own) as pick:
+                self.assertEqual(handplay.choose_music(30, 7, {}), own)      # the library by default
+                pick.assert_called_once_with(30, 7)
+
+
+class AppVideoTest(unittest.TestCase):
+    def test_the_app_video_has_no_shorts_games(self):
+        """No teaser, no "Did you guess it?", never upside down: only with shorts on."""
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td)
+            Image.new("RGB", (40, 70), (90, 90, 90)).save(out / "reference.png")
+            painted = out / "painted"
+            (painted / "frames").mkdir(parents=True)
+            (painted / "frames" / "f.png").write_bytes(b"x")
+            Image.new("RGB", (40, 70)).save(painted / "painting.png")
+            (painted / "strokes.json").write_text("{}")
+            seen = {}
+
+            def render(frames, strokes, video, seconds, size, music, config=None):
+                seen.update(config["handplay"])
+                Path(video).write_bytes(b"x")
+            for shorts in (False, True):
+                seen.clear()
+                with mock.patch.object(handplay, "render", render), \
+                     mock.patch.object(painting, "reference", lambda *a, **k: out / "reference.png"):
+                    res = painting.make("x", "van_gogh", out, {"painting": {"shorts": shorts,
+                                        "music": "none", "upside_down_every": 1, "keep_frames": True}})
+                if shorts:
+                    self.assertNotIn("teaser", seen)
+                    self.assertTrue(seen["upside_down"])
+                else:
+                    self.assertEqual((seen["teaser"], seen["ending_text"], seen["upside_down"]), (0, "", False))
+                self.assertTrue(Path(res["image"]).exists())          # the picture comes with the video
+
+
+class HandOptionTest(unittest.TestCase):
+    def test_the_hand_matches_the_style_and_is_off_where_there_is_none(self):
+        import ui
+        hands = {r["name"]: r["hand"] for r in ui.styles()}
+        self.assertEqual(hands["contemporary"], "the brush")
+        self.assertEqual(hands["pencil"], "the pencil")
+        self.assertEqual(hands["relief_clay"], "the modelling tool")
+        for name in ("compass_spiral", "anim_van_gogh", "anim_oil_morph", "comic_halftone"):
+            self.assertIsNone(hands[name], name)

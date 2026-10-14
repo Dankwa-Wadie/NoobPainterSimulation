@@ -390,6 +390,19 @@ def pick_music(seconds: float, seed: int = 0) -> Path | None:
     return MUSIC / tracks[seed % len(tracks)]["file"]
 
 
+def choose_music(seconds: float, seed: int, config: dict[str, Any] | None) -> Path | None:
+    """The music for a video, by `painting.music`: "library" (the default: a calm track
+    from the classical library, if it has been fetched), "none", or a file of one's own
+    (looped if shorter than the video)."""
+    choice = str(((config or {}).get("painting") or {}).get("music") or "library")
+    if choice == "none":
+        return None
+    if choice != "library":
+        own = Path(choice)
+        return own if own.is_file() else None
+    return pick_music(seconds, seed)
+
+
 def music_start(path: Path) -> float:
     """Where the music begins (after any leading silence), from the manifest."""
     try:
@@ -592,7 +605,7 @@ def render(frames: Path, strokes: Path, out: Path, seconds: float = 50.0,
            "-s", f"{size[0]}x{size[1]}", "-r", str(fps), "-i", "-"]
     if music:
         lead = music_start(Path(music))                 # no dead air before the first note
-        cmd += ["-ss", f"{lead:.2f}", "-i", str(music), "-filter_complex",
+        cmd += ["-stream_loop", "-1", "-ss", f"{lead:.2f}", "-i", str(music), "-filter_complex",
                 f"[1:a]atrim=0:{total:.2f},asetpts=PTS-STARTPTS,afade=t=in:d=1.0,"
                 f"afade=t=out:st={max(0, total - 3):.2f}:d=3,loudnorm=I=-16:TP=-1.5:LRA=11[a]",
                 "-map", "0:v", "-map", "[a]", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]

@@ -254,7 +254,7 @@ def render(motion: Drift | Morph, kind: str, out: Path, cfg: dict[str, Any], mus
            "-r", str(fps), "-i", "-"]
     if music:
         lead = handplay.music_start(music)
-        cmd += ["-ss", f"{lead:.2f}", "-i", str(music), "-filter_complex",
+        cmd += ["-stream_loop", "-1", "-ss", f"{lead:.2f}", "-i", str(music), "-filter_complex",
                 f"[1:a]atrim=0:{secs:.2f},asetpts=PTS-STARTPTS,afade=t=in:d=1.0,"
                 f"afade=t=out:st={max(0, secs - 2.5):.2f}:d=2.5,loudnorm=I=-16:TP=-1.5:LRA=11[a]",
                 "-map", "0:v", "-map", "[a]", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
@@ -388,7 +388,7 @@ def _finish(idea: str, kind: str, config: dict[str, Any], account: str, workdir:
     import progress
     try:
         progress.stage("paint", "Painting every frame")
-        music = handplay.pick_music(float(cfg["seconds"]), seed)
+        music = handplay.choose_music(float(cfg["seconds"]), seed, config)
         video = workdir / "animation.mp4"
         render(motion, kind, video, cfg, music, seed)
         progress.stage("assemble", "Saving")

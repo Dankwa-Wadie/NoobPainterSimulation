@@ -4,10 +4,10 @@
 #
 # It installs what's missing with winget (Git, Python 3.12, ffmpeg, Rust and the C++
 # build tools Rust needs), downloads this project into %USERPROFILE%\NoobPainterSimulation,
-# sets up its Python environment, builds the paint engine and fetches the music.
+# sets up its Python environment, builds the paint engine and offers the music (~500 MB).
 # Windows may ask for permission (a UAC prompt) while the build tools install.
 #
-# Options (set before running):  $env:NOOBPAINTER_DIR = "D:\somewhere"
+# Options (set before running):  $env:NOOBPAINTER_DIR = "D:\somewhere"   $env:WITH_MUSIC = "yes"|"no"
 & {
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -113,9 +113,18 @@ if (-not (Select-String -Quiet -Pattern windows_msvc (Join-Path $Vendor ".cargo\
 Push-Location $Vendor
 try { Run cargo build --release -p easel --features all-boxes } finally { Pop-Location }
 
-Say "Fetching the music (free public-domain recordings)"
-& $Py tools\fetch_classical.py
-if ($LASTEXITCODE -ne 0) { Write-Host "  (music skipped; videos will be silent until you run tools\fetch_classical.py)" }
+# The music is optional: videos can have none, or your own (chosen in the app)
+$music = $env:WITH_MUSIC
+if (-not $music) {
+    Write-Host "`nDownload the free calm classical music for the videos? About 500 MB."
+    Write-Host "Without it, videos can be silent or use your own music. You can also get it later in the app."
+    $music = if ((Read-Host "[y/N]") -match '^[yY]') { "yes" } else { "no" }
+}
+if ($music -eq "yes") {
+    Say "Fetching the music (free public-domain recordings)"
+    & $Py tools\fetch_classical.py
+    if ($LASTEXITCODE -ne 0) { Write-Host "  (music skipped; you can get it later in the app)" }
+}
 
 Write-Host "`nNot on Windows yet: the one-click local image model (paint from a typed idea)."
 Write-Host "Painting from your own pictures works. Optional: Blender for the carving styles: https://www.blender.org/download/"

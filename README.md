@@ -121,7 +121,7 @@ It does everything, so you don't need to clone the repo yourself:
 - installs what's missing: git, Python 3, ffmpeg (via Homebrew on macOS, which it installs if needed) and Rust;
 - downloads this project into `~/NoobPainterSimulation`;
 - sets up a private Python environment and builds the paint engine (a few minutes the first time);
-- fetches the free classical music;
+- offers the free classical music (about 500 MB; optional: videos can also be silent or use your own music);
 - asks whether to install the optional local image model (about 20 GB);
 - puts a **NoobPainterSimulation** launcher on your desktop;
 - opens the app.
@@ -187,9 +187,15 @@ cd ~/NoobPainterSimulation && .venv/bin/python -m noobpainter ui   # opens http:
 ```
 
 Drop in a picture (or a short clip for the moving styles), pick a style from the
-preview cards, choose the length and whether to show a hand, and press **Paint it**.
-Progress, a live view of the canvas and the finished video appear on the page. It runs
-on your computer only.
+preview cards, and choose what to make: **the painting video** (pick its length and
+whether to show a hand) or **just the finished picture**, which is quicker, keeps your
+picture's shape and is a PNG to download. The moving and ink styles are videos only.
+A video can have no music, the free calm classical music (download it from the app if the
+installer skipped it), or your own: choose a music file and it loops to the video's length.
+Press **Paint it**: progress, a live view of the canvas and the finished video (with its
+finished picture to download too) or picture appear on the page. In the app a video is
+just the painting and its reveal: the "Guess what I'm painting" teaser and ending are for
+YouTube Shorts made from the command line. It runs on your computer only.
 
 **The command line:**
 
@@ -197,6 +203,7 @@ on your computer only.
 python -m noobpainter styles                                   # list the styles
 python -m noobpainter paint photo.jpg --style van_gogh --out out/my-painting
 python -m noobpainter paint photo.jpg --style pencil --hand    # with the hand overlay
+python -m noobpainter paint photo.jpg --style van_gogh --picture-only   # just the picture, no video
 python -m noobpainter paint portrait.png --style bizarre_manga
 python -m noobpainter paint photo.jpg --style relief_wood      # carved (Blender)
 python -m noobpainter paint --video clip.mp4 --style anim_van_gogh
