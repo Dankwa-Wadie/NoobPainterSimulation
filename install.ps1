@@ -103,6 +103,13 @@ if (-not (Select-String -Quiet -Pattern hand_secs (Join-Path $Vendor "crates\eas
 if (-not (Test-Path (Join-Path $Vendor "crates\easel\src\uds.rs"))) {
     Run git -C $Vendor apply (Join-Path $Dir "patches\claude-paint-windows.patch")
 }
+# MSVC can't take the fixed Lua seed the way gcc/clang do (see the patch): without it the
+# engine refuses to paint. Lua was already built without it in installs before this, so rebuild it.
+if (-not (Select-String -Quiet -Pattern windows_msvc (Join-Path $Vendor ".cargo\config.toml"))) {
+    Run git -C $Vendor apply (Join-Path $Dir "patches\claude-paint-windows-seed.patch")
+    Push-Location $Vendor
+    try { Run cargo clean --release -p lua-src } finally { Pop-Location }
+}
 Push-Location $Vendor
 try { Run cargo build --release -p easel --features all-boxes } finally { Pop-Location }
 

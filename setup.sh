@@ -22,6 +22,10 @@ fi
 if [ ! -f vendor/claude-paint/crates/easel/src/uds.rs ]; then
   git -C vendor/claude-paint apply "$PWD/patches/claude-paint-windows.patch"
 fi
+# ...and the fixed Lua seed in a form MSVC accepts (Windows only; no change elsewhere)
+if ! grep -q windows_msvc vendor/claude-paint/.cargo/config.toml; then
+  git -C vendor/claude-paint apply "$PWD/patches/claude-paint-windows-seed.patch"
+fi
 # every pigment box (the modern palette needs cadmiums, ultramarine, viridian...)
 (cd vendor/claude-paint && cargo build --release -p easel --features all-boxes)
 echo "built: vendor/claude-paint/target/release/easel"
