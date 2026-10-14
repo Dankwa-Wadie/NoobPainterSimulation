@@ -20,7 +20,7 @@ samples were made with the optional hand overlay on (`--hand`).
 
 ## Every style
 
-The same owl in every style (the last two are drawn on characters of their own).
+Each style on a subject that suits it: the oil styles on subjects of their own, the drawing and carving styles on the same owl so they compare directly. Each preview shows the making, then the finished piece in full.
 
 | **Contemporary**<br>`contemporary` | **Impressionist**<br>`impressionist` | **Van Gogh**<br>`van_gogh` | **Old Master**<br>`old_master` | **Baroque**<br>`baroque` |
 |:---:|:---:|:---:|:---:|:---:|
