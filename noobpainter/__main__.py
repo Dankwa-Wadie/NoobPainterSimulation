@@ -21,12 +21,20 @@ def main() -> int:
     p.add_argument("--hand", action="store_true",
                    help="show a hand holding the brush/pencil/tool on every stroke")
     sub.add_parser("styles", help="list the styles")
+    u = sub.add_parser("ui", help="open the web app (local only)")
+    u.add_argument("--port", type=int, default=8770)
+    u.add_argument("--no-browser", action="store_true")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     if a.cmd == "styles":
         for name, st in brushwork.STYLES.items():
             print(f"{name:16s} {st.get('medium', 'oil')}")
         print("anim_van_gogh    animation\nanim_oil_morph   animation")
+        print("comic_halftone   ink\nbizarre_manga    ink")
+        return 0
+    if a.cmd == "ui":
+        import ui
+        ui.serve(a.port, not a.no_browser)
         return 0
     if not (a.picture or a.idea or a.video):
         ap.error("give a picture, an --idea or a --video")

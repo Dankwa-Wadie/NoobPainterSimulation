@@ -113,6 +113,8 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
     config = config or {}
     out = Path(out_dir).resolve()
     out.mkdir(parents=True, exist_ok=True)
+    if style in ("comic_halftone", "bizarre_manga"):
+        return _ink_page(idea, style, out, config, picture)
     if style.startswith("anim_") or video:
         import paintanim
         kind = style.removeprefix("anim_") if style.startswith("anim_") else "van_gogh"
@@ -152,6 +154,65 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
             progress.finish(title)
         return {"video": video_out, "painting": painted / "painting.png", "title": title,
                 "description": desc, "upside_down": flip}
+    except Exception as e:
+        if owns:
+            progress.fail(str(e))
+        raise
+
+
+def _ink_page(idea: str, style: str, out: Path, config: dict[str, Any],
+              picture: Path | str | None) -> dict[str, Any]:
+    """comic_halftone (comicpanel.py) and bizarre_manga (manga.py): drawn with OpenCV,
+    not the oil simulator, because they are crisp ink, dots and flat colour."""
+    import comicpanel
+    import handplay
+    import localimage
+    import manga
+    import progress
+    is_manga = style == "bizarre_manga"
+    seed = int(hashlib.sha1(f"{idea}|{style}".encode()).hexdigest()[:8], 16)
+    owns = not progress.active()
+    if owns:
+        progress.start("", f"{style}: {idea or picture}")
+    try:
+        ref = out / "reference.png"
+        if picture and not ref.exists():
+            shutil.copy(picture, ref)
+        if not ref.exists():
+            progress.stage("reference", idea[:100])
+            lcfg = {"longform": {"local_image": {**(config.get("local_image") or {}),
+                    "style": manga.PROMPT if is_manga else comicpanel.PROMPT,
+                    "negative": "text, speech bubble, watermark, photo, logo",
+                    "width": 576, "height": 1024}}}
+            try:
+                localimage.generate(idea, ref, lcfg, seed=seed)
+            finally:
+                localimage.release(localimage.settings(lcfg))
+        progress.stage("assemble", "Inking" if is_manga else "Ink, screentone and the push in")
+        if is_manga:
+            secs = sum(float(v) for v in {**manga.DEFAULTS, **(config.get("manga") or {})}["timing"])
+            music = handplay.pick_music(secs, seed)
+            video = manga.render(ref, out / "manga.mp4", config, music, seed)
+            title = "Watch this manga page come to life 🖋️"
+            made = ("A blue pencil rough, brush-pen ink, hatching and solid blacks, then flat colour "
+                    "under the ink")
+        else:
+            secs = float({**comicpanel.DEFAULTS, **(config.get("comicpanel") or {})}["seconds"])
+            music = handplay.pick_music(secs, seed)
+            video = comicpanel.render(ref, out / "comic.mp4", config, music)
+            title = "Comic panel 🖤"
+            made = "A comic panel in ink and screentone"
+        desc = f"{made}, made by a computer simulation, not a human artist ({style.replace('_', ' ')} style)."
+        if music:
+            m = next((m for m in json.loads((handplay.MUSIC / "manifest.json").read_text())
+                      if m["file"] == music.name), None)
+            if m:
+                desc += (f"\n\nMusic: {m['title'].removeprefix('File:').rsplit('.', 1)[0]} "
+                         f"({m['licence']}, via Wikimedia Commons / Musopen).")
+        (out / "credits.txt").write_text(f"{title}\n\n{desc}\n")
+        if owns:
+            progress.finish(title)
+        return {"video": video, "title": title, "description": desc}
     except Exception as e:
         if owns:
             progress.fail(str(e))

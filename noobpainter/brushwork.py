@@ -60,6 +60,7 @@ DEFAULTS: dict[str, Any] = {
     "saturate": 1.0,                # chroma scale of the reference
     "contrast": 1.0,                # lightness spread of the reference, about mid grey
     "posterize": 0,                 # >0: flatten the reference to this many colours first
+    "tint": None,                   # [[shadow rgb], [light rgb], amount]: dramatic colour
     "lay": 1.0,                     # paint a full brush lays (4+ is impasto)
     "contour": None,                # [width, recipe, most strokes]: dark lines along edges
     "prompt": "",                   # how the reference picture should be drawn (localimage)
@@ -259,6 +260,7 @@ STYLES: dict[str, dict[str, Any]] = {
         "prompt": ("high-contrast black and white portrait illustration, one clear subject filling "
                    "the frame, strong light and shadow, plain light background"),
     },
+    # (bizarre_manga is drawn in ink, then coloured, by manga.py, not painted in oil)
     "contemporary": {
         "palette": "modern", "ground": [["zinc white", 1]],
         "saturate": 1.3, "contrast": 1.1,
@@ -294,6 +296,16 @@ def prepare(ref: np.ndarray, cfg: dict[str, Any], seed: int = 0) -> np.ndarray:
         idx = Image.fromarray(labels.reshape(ref.shape[:2]).astype(np.uint8))
         labels = np.asarray(idx.filter(ImageFilter.ModeFilter(5)))
         ref = centres[labels]
+        lab = oilpaint._lab(ref)
+    if cfg.get("tint"):
+        # dramatic colour: shadows pushed toward one hue, lights toward another
+        # (the purple-shaded skin and gold lights of bold manga colour)
+        shade, light, amount = cfg["tint"]
+        lum = lab[..., 0:1] / 100.0
+        w_dark = np.clip(1.0 - lum * 1.6, 0, 1) * amount
+        w_light = np.clip(lum * 1.6 - 0.6, 0, 1) * amount
+        ref = np.clip(ref * (1 - w_dark - w_light) + np.array(shade) * w_dark
+                      + np.array(light) * w_light, 0, 1)
         lab = oilpaint._lab(ref)
     sat, con = float(cfg.get("saturate", 1)), float(cfg.get("contrast", 1))
     if sat == 1 and con == 1:
@@ -850,9 +862,10 @@ def drawing_lua(g: dict[str, Any], first: int) -> list[str]:
             out = head + ["--@ chunk", f"P = {make}", "LINES = 0",
                           "function S(n, pts, pr)", "  local t = hand_secs()", f"  {draw}",
                           '  print("S", n, t, hand_secs())', "end"]
-            for i in range(0, len(g["strokes"]), 80):
+            size = max(80, -(-len(g["strokes"]) // 25))
+            for i in range(0, len(g["strokes"]), size):
                 out.append("--@ chunk")
-                for j, st in enumerate(g["strokes"][i:i + 80]):
+                for j, st in enumerate(g["strokes"][i:i + size]):
                     pts = ", ".join(f"{{{x:g}, {y:g}}}" for x, y in st["pts"])
                     out.append(f"S({first + i + j}, {{{pts}}}, {g.get('pressure', 0.6):g})")
             return out
@@ -865,9 +878,10 @@ def drawing_lua(g: dict[str, Any], first: int) -> list[str]:
     out += ["function S(n, pts, pr)", "  local t = hand_secs()", f"  {draw}",
             '  print("S", n, t, hand_secs())', "end"]
     pr = g.get("pressure", 0.6)
-    for i in range(0, len(g["strokes"]), 80):
+    size = max(80, -(-len(g["strokes"]) // 25))
+    for i in range(0, len(g["strokes"]), size):
         out.append("--@ chunk")
-        for j, st in enumerate(g["strokes"][i:i + 80]):
+        for j, st in enumerate(g["strokes"][i:i + size]):
             pts = ", ".join(f"{{{x:g}, {y:g}}}" for x, y in st["pts"])
             mine = ("{" + ", ".join(f"{v:g}" for v in st["prs"]) + "}") if st.get("prs") else f"{pr:g}"
             out.append(f"S({first + i + j}, {{{pts}}}, {mine})")
@@ -944,7 +958,8 @@ def layer_lua(strokes: list[dict[str, Any]], recipes: list[list[tuple[str, float
            '  print("S", n, t, hand_secs())',
            "end",
            "CUR, LEFT = nil, 0"]
-    chunk_size = 60
+    # the easel saves a frame at every chunk's end: keep a layer to ~25 chunks
+    chunk_size = max(60, -(-len(strokes) // 25))
     for i in range(0, len(strokes), chunk_size):
         out.append("--@ chunk")
         for j, s in enumerate(strokes[i:i + chunk_size]):
@@ -958,6 +973,8 @@ def layer_lua(strokes: list[dict[str, Any]], recipes: list[list[tuple[str, float
 
 
 def _group_lua(g: dict[str, Any], first: int) -> list[str]:
+    if g.get("wait"):                                # time passing, hands off: paint dries
+        return ["--@ chunk", f"wait({int(g['wait'])})"]
     if g.get("tool"):
         return drawing_lua(g, first)
     if g.get("blend"):                              # a badger over the canvas, tile by tile
@@ -1140,10 +1157,10 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
     if cfg.get("hatch"):
         hc = cfg["hatch"]
         lines = plan_hatching(ref, float(hc["below"]), float(hc["cross"]), float(hc["spacing"]),
-                              float(hc["length"]), rng)
+                              float(hc["length"]), rng, budget=int(hc.get("budget", 0)))
         recipe = [tuple(r) for r in hc.get("recipe", [["vine black", 1]])]
         finish.append({"layer": n_fin, "strokes": lines, "kind": "round", "width": float(hc["width"]),
-                       "recipes": [recipe], "thin": False, "lay": 1.0, "per_dip": 10})
+                       "recipes": [recipe], "thin": False, "lay": 1.0, "per_dip": 10, "ink": True})
         LOG.info("hatching: %d strokes", len(lines))
     for g in finish:
         for st in g["strokes"]:
@@ -1155,13 +1172,23 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
         n = len(cfg["layers"])
         groups.append({"layer": n, "strokes": lines, "recipes": [[tuple(r) for r in recipe]],
                        "kind": "round", "width": float(width), "thin": False, "lay": 1.0,
-                       "per_dip": int(cfg["strokes_per_dip"]) * 2})
+                       "per_dip": int(cfg["strokes_per_dip"]) * 2, "ink": True})
         for c in lines:
             c.update(layer=n, brush="round", width=float(width))
         LOG.info("contours (round %g): %d lines", width, len(lines))
     lines_group = groups.pop() if cfg.get("contour") else None
     groups = reorder(groups, subject_mask(ref) if cfg.get("subject_last") else None)
     groups += finish + ([lines_group] if lines_group else [])
+    if cfg.get("ink_first"):
+        # As manga is made: the black-and-white inking first (outlines, then hatching),
+        # the ink left to dry, then the colour over it in thin washes that let it show.
+        ink = sorted((g for g in groups if g.get("ink")), key=lambda g: g is not lines_group)
+        colour = [g for g in groups if not g.get("ink")]
+        for g in colour:
+            if g.get("strokes"):
+                # thin transparent washes (turpentine), so the ink beneath stays visible
+                g.update(thin=False, lay=1.0, pile_extra=g.get("pile_extra", "") + ", turps=0.8")
+        groups = ink + [{"wait": 4320, "strokes": []}] + colour
     plan, lua = [], list(head_lines)
     for g in groups:
         lua += _group_lua(g, len(plan))
@@ -1171,11 +1198,20 @@ def paint(picture: Path | str, out_dir: Path | str, config: dict[str, Any] | Non
     frames = out / "frames"
     shutil.rmtree(frames, ignore_errors=True)
     png = out / "painting.png"
-    progress.stage("paint", f"{len(plan):,} strokes, one at a time")
-    # ~1.7 s of hand time a stroke, palette trips included (measured on the tests)
     want_frames = cfg.get("frames", True)            # stylefit's quick tests skip them
+    progress.stage("paint", f"{len(plan):,} strokes, one at a time")
+    # Never fill the disk: frames are ~6 MB each at 2160 px. A bizarre-manga test with
+    # thousands of tiny ink strokes wrote 3,335 of them (22 GB) and filled the disk.
+    import shutil as _sh
+    free = _sh.disk_usage(out).free / 1e9
+    if want_frames and free < float(cfg.get("min_free_gb", 8)):
+        raise RuntimeError(f"only {free:.1f} GB of disk free; a painting needs at least "
+                           f"{cfg.get('min_free_gb', 8)} GB for its frames")
+    hand_secs = len(plan) * 1.7
+    every = max(float(cfg["frames_every"]), hand_secs / float(cfg.get("max_frames", 600)))
+    # ~1.7 s of hand time a stroke, palette trips included (measured on the tests)
     log = _run(script, png, int(cfg["width"]), frames if want_frames else None,
-               float(cfg["frames_every"]), int(cfg["frame_width"]), expect=len(plan) * 1.7)
+               every, int(cfg["frame_width"]), expect=hand_secs)
     progress.set_preview(png)
     times, dips = _parse_log(log)
     for i, s in enumerate(plan):

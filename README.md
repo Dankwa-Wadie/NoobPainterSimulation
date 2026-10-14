@@ -18,6 +18,26 @@ painter would put each one, and records the whole thing.
 Full sample videos (with music) are on the [Releases page](../../releases). These
 samples were made with the optional hand overlay on (`--hand`).
 
+## Every style
+
+The same owl in every style (the last two are drawn on characters of their own).
+
+| **Contemporary**<br>`contemporary` | **Impressionist**<br>`impressionist` | **Van Gogh**<br>`van_gogh` | **Old Master**<br>`old_master` | **Baroque**<br>`baroque` |
+|:---:|:---:|:---:|:---:|:---:|
+| ![contemporary](docs/media/styles/contemporary.gif) | ![impressionist](docs/media/styles/impressionist.gif) | ![van_gogh](docs/media/styles/van_gogh.gif) | ![old_master](docs/media/styles/old_master.gif) | ![baroque](docs/media/styles/baroque.gif) |
+
+| **Pop**<br>`pop` | **Caricature**<br>`caricature` | **B&W exaggerated**<br>`bw_exaggerated` | **Pencil**<br>`pencil` | **Maze**<br>`maze` |
+|:---:|:---:|:---:|:---:|:---:|
+| ![pop](docs/media/styles/pop.gif) | ![caricature](docs/media/styles/caricature.gif) | ![bw_exaggerated](docs/media/styles/bw_exaggerated.gif) | ![pencil](docs/media/styles/pencil.gif) | ![maze](docs/media/styles/maze.gif) |
+
+| **Waves**<br>`waves` | **Continuous**<br>`continuous` | **Compass spiral**<br>`compass_spiral` | **Relief: wood**<br>`relief_wood` | **Relief: marble**<br>`relief_marble` |
+|:---:|:---:|:---:|:---:|:---:|
+| ![waves](docs/media/styles/waves.gif) | ![continuous](docs/media/styles/continuous.gif) | ![compass_spiral](docs/media/styles/compass_spiral.gif) | ![relief_wood](docs/media/styles/relief_wood.gif) | ![relief_marble](docs/media/styles/relief_marble.gif) |
+
+| **Relief: clay (moulded)**<br>`relief_clay` | **Van Gogh (moving)**<br>`anim_van_gogh` | **Oil paint (moving)**<br>`anim_oil_morph` | **Bizarre manga**<br>`bizarre_manga` | **Comic halftone**<br>`comic_halftone` |
+|:---:|:---:|:---:|:---:|:---:|
+| ![relief_clay](docs/media/styles/relief_clay.gif) | ![anim_van_gogh](docs/media/styles/anim_van_gogh.gif) | ![anim_oil_morph](docs/media/styles/anim_oil_morph.gif) | ![bizarre_manga](docs/media/styles/bizarre_manga.gif) | ![comic_halftone](docs/media/styles/comic_halftone.gif) |
+
 ---
 
 ## How it works, in plain words
@@ -52,6 +72,8 @@ Calm public-domain classical music plays underneath.
 - **Compass spiral** — the picture drawn as one spiral of compass arcs; the line weight carries the picture.
 - **Carving and clay** — a 3D block carved away (or clay built up) bit by bit, rendered in Blender under raking light, in wood, marble or terracotta.
 - **Moving paintings** — a picture or a video clip repainted frame by frame, about 12 paintings a second, so the brushwork shimmers (the technique of the film *Loving Vincent*).
+- **Bizarre manga** — made as manga is: a blue pencil rough, brush-pen ink (face first), hatching and solid blacks, the blue fades out, then flat bold colour under the ink.
+- **Comic halftone** — ink and printed dot shading over the whole panel; it fades in, holds, then pushes in as the picture softens (the dots stay crisp).
 
 **The honest part:** there is no human painter and no real canvas. It is a computer
 simulation of painting. What makes it more than a filter is that the paint, the brushes
@@ -105,10 +127,24 @@ Optional:
 
 ## Use
 
+**The app** — the easiest way:
+
+```sh
+python -m noobpainter ui        # opens http://127.0.0.1:8770 in your browser
+```
+
+Drop in a picture (or a short clip for the moving styles), pick a style from the
+preview cards, choose the length and whether to show a hand, and press **Paint it**.
+Progress, a live view of the canvas and the finished video appear on the page. It runs
+on your computer only.
+
+**The command line:**
+
 ```sh
 python -m noobpainter styles                                   # list the styles
 python -m noobpainter paint photo.jpg --style van_gogh --out out/my-painting
 python -m noobpainter paint photo.jpg --style pencil --hand    # with the hand overlay
+python -m noobpainter paint portrait.png --style bizarre_manga
 python -m noobpainter paint photo.jpg --style relief_wood      # carved (Blender)
 python -m noobpainter paint --video clip.mp4 --style anim_van_gogh
 ```
@@ -118,7 +154,8 @@ description and the music's licence) into the output folder.
 
 **Styles:** `contemporary`, `impressionist`, `van_gogh`, `old_master`, `baroque`, `pop`,
 `caricature`, `bw_exaggerated`, `pencil`, `maze`, `waves`, `continuous`, `compass_spiral`,
-`relief_wood`, `relief_marble`, `relief_clay`, `anim_van_gogh`, `anim_oil_morph`.
+`relief_wood`, `relief_marble`, `relief_clay`, `anim_van_gogh`, `anim_oil_morph`,
+`bizarre_manga`, `comic_halftone`.
 
 ## Layout
 
@@ -132,7 +169,10 @@ description and the music's licence) into the output folder.
 | `noobpainter/paintanim.py` | moving paintings, and repainting a clip frame by frame |
 | `noobpainter/stylefit.py` | fits a style to example pictures |
 | `noobpainter/riso.py` | risograph print effect |
+| `noobpainter/manga.py` | bizarre manga: rough, ink, hatching, blacks, then colour |
+| `noobpainter/comicpanel.py` | comic halftone: screentone, push in and blur |
 | `noobpainter/pipeline.py` | picture/idea in, video out |
+| `noobpainter/ui.py` | the web app |
 | `noobpainter/wanvideo.py` | **experimental:** local video model (Wan 2.2) for motion — unreliable on a 24 GB Mac; only subtle motion |
 | `tools/fetch_classical.py` | downloads calm classical recordings, checks licences and voices |
 
