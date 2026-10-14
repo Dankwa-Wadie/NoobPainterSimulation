@@ -78,6 +78,11 @@ say "Building the paint engine (a few minutes, the first time)"
 
 # The music is optional: videos can have none, or your own (chosen in the app)
 choice="${WITH_MUSIC:-ask}"
+if [ "$choice" = "ask" ] && [ -f assets/music/classical/manifest.json ] \
+   && ls assets/music/classical/*.m4a >/dev/null 2>&1; then
+  echo; echo "The music is already downloaded."          # an update: don't ask again
+  choice=no
+fi
 if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then
   printf '\nDownload the free calm classical music for the videos? About 500 MB.\n'
   printf 'Without it, videos can be silent or use your own music. You can also get it later in the app. [y/N] '
@@ -90,6 +95,10 @@ if [ "$choice" = "yes" ]; then
 fi
 
 choice="${WITH_IMAGE_MODEL:-ask}"
+if [ "$choice" = "ask" ] && [ -f "${NOOBPAINTER_COMFY_HOME:-$HOME/ComfyUI-Installs/ComfyUI}/ComfyUI/models/unet/qwen-image-2512-Q4_K_M.gguf" ]; then
+  echo "The local image model is already installed."
+  choice=no
+fi
 if [ "$choice" = "ask" ] && (: < /dev/tty) 2>/dev/null; then
   printf '\nInstall the local image model too? It lets you paint from a typed idea\n'
   printf 'instead of a picture. About 20 GB to download. You can also do it later from the app. [y/N] '

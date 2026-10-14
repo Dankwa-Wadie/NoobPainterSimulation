@@ -129,6 +129,12 @@ try { Run cargo build --release -p easel --features all-boxes } finally { Pop-Lo
 
 # The music is optional: videos can have none, or your own (chosen in the app)
 $music = $env:WITH_MUSIC
+$library = Join-Path $Dir "assets\music\classical"
+if (-not $music -and (Test-Path (Join-Path $library "manifest.json")) -and
+    (Get-ChildItem -Path $library -Filter *.m4a -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    Write-Host "`nThe music is already downloaded."           # an update: don't ask again
+    $music = "no"
+}
 if (-not $music) {
     Write-Host "`nDownload the free calm classical music for the videos? About 500 MB."
     Write-Host "Without it, videos can be silent or use your own music. You can also get it later in the app."
