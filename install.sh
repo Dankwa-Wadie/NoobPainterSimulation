@@ -10,6 +10,10 @@
 # Options (set before `bash`):  NOOBPAINTER_DIR=~/somewhere   WITH_IMAGE_MODEL=yes|no
 set -euo pipefail
 
+# Everything is inside main(), run on the last line: bash reads the whole script before
+# running it, so a command that reads stdin cannot swallow the rest of a piped script.
+main() {
+
 DIR="${NOOBPAINTER_DIR:-$HOME/NoobPainterSimulation}"
 REPO="https://github.com/Dankwa-Wadie/NoobPainterSimulation"
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
@@ -20,18 +24,18 @@ say "Checking the tools it needs"
 if [ "$OS" = "Darwin" ]; then
   if ! have brew; then
     say "Installing Homebrew (the macOS package manager; it may ask for your password)"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" < /dev/null
     eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
   fi
   for pkg in git python@3.12 ffmpeg; do
-    brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg"
+    brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" < /dev/null
   done
   PYTHON="$(brew --prefix)/bin/python3.12"
 elif [ "$OS" = "Linux" ]; then
   if have apt-get; then
-    sudo apt-get update -y && sudo apt-get install -y git python3 python3-venv python3-pip ffmpeg build-essential curl
+    sudo apt-get update -y < /dev/null && sudo apt-get install -y git python3 python3-venv python3-pip ffmpeg build-essential curl < /dev/null
   elif have dnf; then
-    sudo dnf install -y git python3 python3-pip ffmpeg gcc gcc-c++ make curl
+    sudo dnf install -y git python3 python3-pip ffmpeg gcc gcc-c++ make curl < /dev/null
   else
     echo "Please install git, Python 3.10+, ffmpeg and a C compiler, then run this again." >&2; exit 1
   fi
@@ -90,3 +94,6 @@ if [ -r /dev/tty ]; then
   read -r go < /dev/tty || go=n
   case "$go" in [nN]*) ;; *) exec .venv/bin/python -m noobpainter ui ;; esac
 fi
+}
+
+main "$@"
