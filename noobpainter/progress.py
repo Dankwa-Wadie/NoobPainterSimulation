@@ -13,6 +13,43 @@ from pathlib import Path
 
 _lock = threading.Lock()
 _state: dict = {}
+_cancel = threading.Event()
+
+# Helper programs a painting starts that a cancel stops; these others keep running (the
+# image model's server, and the downloads under Extras, aren't part of the painting).
+_SPARE = ("ComfyUI", "main.py", "fetch_classical", "install_image_model")
+
+
+class Cancelled(Exception):
+    """The person pressed Cancel: the work stops at its next progress report."""
+
+
+def cancel() -> None:
+    """Stop the painting being made: flag it (checked at every stage, step and preview)
+    and stop the helper programs it is running now (the paint engine, ffmpeg, Blender)."""
+    _cancel.set()
+    report("✗ Cancelling…")
+    try:
+        import psutil
+        me = psutil.Process()
+        for child in me.children(recursive=True):
+            try:
+                if any(s in " ".join(child.cmdline()) for s in _SPARE):
+                    continue
+                child.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except ImportError:
+        pass                                           # the flag alone stops it, a little later
+
+
+def cancelled() -> bool:
+    return _cancel.is_set()
+
+
+def _check() -> None:
+    if _cancel.is_set():
+        raise Cancelled("cancelled")
 
 # rough share of the whole run each stage takes, for one percent bar
 _STAGES = {"reference": (0, 10), "plan": (10, 30), "paint": (30, 75), "assemble": (75, 99)}
@@ -42,6 +79,7 @@ def _percent(frac: float) -> None:
 
 
 def start(account: str = "", topic: str = "", kind: str = "") -> None:
+    _cancel.clear()
     with _lock:
         _state.clear()
         _state.update(topic=topic, began=time.time(), stage="", running=True, percent=0.0,
@@ -58,12 +96,14 @@ def set_workdir(workdir: str | Path) -> None:
 
 
 def stage(key: str, detail: str = "", total: int = 0) -> None:
+    _check()
     _set(stage=key, detail=detail, total=total)
     _percent(0.0)
     report(f"  [{key}] {detail}")
 
 
 def step(done: int, total: int | None = None, detail: str = "") -> None:
+    _check()
     total = total if total is not None else _state.get("total", 0)
     if total:
         _percent(done / total)
@@ -73,6 +113,7 @@ def step(done: int, total: int | None = None, detail: str = "") -> None:
 
 
 def fraction(frac: float, detail: str = "") -> None:
+    _check()
     _percent(frac)
     if detail:
         _set(detail=detail)
@@ -87,6 +128,7 @@ def tick(elapsed: float, expected: float = 180.0) -> None:
 
 
 def set_preview(path: str | Path) -> None:
+    _check()
     _set(preview=str(path), preview_at=time.time())
 
 

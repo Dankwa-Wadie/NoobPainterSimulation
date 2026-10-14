@@ -219,7 +219,8 @@ style keeps your picture's shape: a landscape photo makes a landscape video (fro
 idea, it's 9:16). The moving and ink styles are videos only.
 A video can have no music, the free calm classical music (download it from the app if the
 installer skipped it), or your own: choose a music file and it loops to the video's length.
-Press **Paint it**: progress, a live view of the canvas and the finished video (with its
+Press **Paint it**: progress (with a **Cancel** button that stops it and its paint engine,
+ffmpeg or Blender within seconds), a live view of the canvas and the finished video (with its
 finished picture to download too) or picture appear on the page. Under a finished
 video, **Add the hand** (or **Remove the hand**) cuts it again with the hand drawing or
 painting every stroke, in about a minute, without painting it again (the app keeps the

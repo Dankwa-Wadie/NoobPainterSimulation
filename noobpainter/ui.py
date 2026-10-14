@@ -200,8 +200,11 @@ def _run(job: dict) -> None:
                    image=str(res["image"]) if res.get("image") else None, title=res.get("title", ""),
                    description=res.get("description", ""), stamp=dt.datetime.now().timestamp())
     except Exception as e:                                    # noqa: BLE001 - shown on the page
-        job.update(status="failed", error=f"{e}")
-        traceback.print_exc()
+        if progress.cancelled():
+            job.update(status="cancelled", error=None)
+        else:
+            job.update(status="failed", error=f"{e}")
+            traceback.print_exc()
     finally:
         _prune_frames()
 
@@ -225,8 +228,11 @@ def _recut(job: dict, hand: bool) -> None:
         pipeline.recut(job["out"], hand)
         job.update(status="done", hand=hand, stamp=dt.datetime.now().timestamp())
     except Exception as e:                                    # noqa: BLE001 - shown on the page
-        job.update(status="failed", error=f"{e}")
-        traceback.print_exc()
+        if progress.cancelled():                         # the video stays as it was
+            job.update(status="done", error=None)
+        else:
+            job.update(status="failed", error=f"{e}")
+            traceback.print_exc()
 
 
 def _url(path: str | Path) -> str:
@@ -342,6 +348,11 @@ class Handler(BaseHTTPRequestHandler):
             if _model.get("status") == "running":
                 return self._json(409, {"error": "already installing"})
             threading.Thread(target=_install_model, daemon=True).start()
+            return self._json(200, {"ok": True})
+        if url.path == "/api/cancel":
+            if _job.get("status") != "running":
+                return self._json(409, {"error": "nothing is being made"})
+            progress.cancel()
             return self._json(200, {"ok": True})
         if url.path == "/api/recut":
             import pipeline
@@ -480,6 +491,7 @@ button.go{margin-top:18px;width:100%;padding:13px;border:0;border-radius:11px;ba
 pre{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;max-height:170px;overflow:auto;font-size:12px;white-space:pre-wrap}
 .model{margin-top:8px;font-size:13px;color:var(--muted)}.model button{margin-left:6px;padding:5px 10px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;cursor:pointer}.model pre{max-height:110px}.model a{color:var(--accent)}
 .result video,.result img,.live img{width:100%;max-height:520px;object-fit:contain;border-radius:10px;background:#000}.live img{background:var(--bg)}
+button.cancel{padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer;margin-bottom:10px}button.cancel:disabled{opacity:.5;cursor:default}
 a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
 </style></head><body><main>
 <h1>NoobPainterSimulation</h1><p class="sub">Pictures painted, drawn and carved stroke by stroke, by a simulation. Runs on this computer only.</p>
@@ -515,6 +527,7 @@ a.dl{display:inline-block;margin-top:10px;color:var(--accent);font-weight:600}
   <h2>Progress</h2>
   <div class="status"><b id="stage">Waiting for a picture</b><span class="muted" id="pct"></span></div>
   <div class="bar"><span id="bar"></span></div><p class="muted" id="detail"></p>
+  <button type="button" class="cancel" id="cancel" style="display:none">Cancel</button>
   <div class="live" id="live"></div><div class="result" id="result"></div>
   <details style="margin-top:12px"><summary class="muted">Log</summary><pre id="log"></pre></details>
  </section>
@@ -605,13 +618,16 @@ async function send(files){if(!files.length)return;$('#formerr').textContent='';
 document.addEventListener('click',async e=>{if(e.target.id!=='recut')return;e.target.disabled=true;
  const r=await fetch('/api/recut',{method:'POST',body:JSON.stringify({hand:e.target.dataset.hand==='1'})});const j=await r.json();
  if(!r.ok){$('#formerr').textContent=j.error;e.target.disabled=false;return;}$('#result').innerHTML='';poll();});
+$('#cancel').onclick=async()=>{$('#cancel').disabled=true;$('#cancel').textContent='Cancelling…';
+ await fetch('/api/cancel',{method:'POST',body:'{}'});setTimeout(()=>{$('#cancel').textContent='Cancel';},4000);};
 $('#go').onclick=async()=>{$('#formerr').textContent='';
  const body={style,idea:$('#idea').value,files:((styleRows.find(r=>r.name===style)||{}).multi?uploads:uploads.slice(0,1)).map(u=>u.file),seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
  const r=await fetch('/api/paint',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
  if(!r.ok){$('#formerr').textContent=j.error;return;}$('#result').innerHTML='';poll();};
 async function poll(){const r=await fetch('/api/job');const j=await r.json();
  const st=j.status;$('#go').disabled=st==='running';
- $('#stage').textContent=st==='running'?({reference:'Preparing the picture',download:'Downloading (needed once)',plan:'Planning the strokes',paint:'Painting',assemble:'Cutting the video'}[j.stage]||'Working'):st==='done'?'Done':st==='failed'?'Something went wrong':'Waiting for a picture';
+ $('#cancel').style.display=st==='running'?'':'none';if(st!=='running')$('#cancel').disabled=false;
+ $('#stage').textContent=st==='running'?({reference:'Preparing the picture',download:'Downloading (needed once)',plan:'Planning the strokes',paint:'Painting',assemble:'Cutting the video'}[j.stage]||'Working'):st==='done'?'Done':st==='failed'?'Something went wrong':st==='cancelled'?'Cancelled':'Waiting for a picture';
  $('#pct').textContent=st?Math.floor(j.percent||0)+'%':'';$('#bar').style.width=(j.percent||0)+'%';$('#detail').textContent=j.error||j.detail||'';
  $('#log').textContent=(j.log||[]).join('\n');
  if(j.preview&&j.preview_at!==lastPreview&&st==='running'){lastPreview=j.preview_at;$('#live').innerHTML=`<img src="${j.preview}?t=${lastPreview}" alt="The canvas so far">`;}

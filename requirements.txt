@@ -8,3 +8,5 @@ rembg[cpu]
 torch
 transformers
 certifi
+# the app's Cancel button stops the painting's helper programs
+psutil
