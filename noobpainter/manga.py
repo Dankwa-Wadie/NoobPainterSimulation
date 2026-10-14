@@ -36,6 +36,7 @@ DEFAULTS: dict[str, Any] = {
     "tint": [[92, 40, 132], [250, 205, 80], 0.32],  # shadows to purple, lights to gold (RGB, amount)
     "saturate": 1.45,
     "hatch_budget": 1200,
+    "hand_overlay": False,          # a hand holding the pencil, then the pen, on each stroke
 }
 PROMPT = ("bold manga colour illustration, an original fictional character, sharp angular face, "
           "strong jaw, defined lips, intense stare, ornate headwear and jewellery, dramatic pose "
@@ -182,6 +183,50 @@ def draw_ink(layer: np.ndarray, pts: np.ndarray, width: float, frac: float = 1.0
         cv2.line(layer, tuple(int(v) for v in p[i]), tuple(int(v) for v in p[i + 1]), 255, wdt, cv2.LINE_AA)
 
 
+class Hand:
+    """A hand (assets/hand) whose tool tip follows the stroke being drawn."""
+
+    def __init__(self, W: int):
+        import json
+        import handplay
+        self.sprites = {}
+        for tool in ("pencil", "pen"):
+            meta = handplay.HAND.with_name(f"{tool}.json")
+            if not meta.exists():
+                continue
+            m = json.loads(meta.read_text())
+            img = cv2.imread(str(meta.parent / m["file"]), cv2.IMREAD_UNCHANGED)
+            k = W * 0.42 / img.shape[1]
+            img = cv2.resize(img, (int(img.shape[1] * k), int(img.shape[0] * k)), interpolation=cv2.INTER_AREA)
+            rgba = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA).astype(np.float32)
+            self.sprites[tool] = (rgba, (m["tip"][0] * k, m["tip"][1] * k))
+        self.pos = None
+
+    def draw(self, frame: np.ndarray, tool: str, target: np.ndarray | None, dt: float) -> np.ndarray:
+        if tool not in self.sprites:
+            return frame
+        if target is None:                       # between stages: the hand drifts away
+            if self.pos is None:
+                return frame
+            target = self.pos + np.array([60.0, -90.0])
+        k = 1 - np.exp(-dt / 0.08)
+        self.pos = np.array(target, np.float32) if self.pos is None else self.pos + (np.asarray(target) - self.pos) * k
+        rgba, tip = self.sprites[tool]
+        H, W = frame.shape[:2]
+        x, y = int(self.pos[0] - tip[0]), int(self.pos[1] - tip[1])
+        for off, alpha, src in ((18, 0.28, None), (0, 1.0, rgba)):        # shadow, then hand
+            hh, ww = rgba.shape[:2]
+            x0, y0 = max(0, x + off), max(0, y + off)
+            x1, y1 = min(W, x + off + ww), min(H, y + off + hh)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            sub = rgba[y0 - y - off:y1 - y - off, x0 - x - off:x1 - x - off]
+            a = sub[..., 3:4] / 255 * alpha
+            col = sub[..., :3] if src is not None else np.full_like(sub[..., :3], 30)
+            frame[y0:y1, x0:x1] = frame[y0:y1, x0:x1] * (1 - a) + col * a
+        return frame
+
+
 def render(picture: Path, out: Path, config: dict[str, Any] | None = None, music: Path | None = None,
            seed: int = 0) -> Path:
     cfg = {**DEFAULTS, **((config or {}).get("manga") or {})}
@@ -232,6 +277,8 @@ def render(picture: Path, out: Path, config: dict[str, Any] | None = None, music
             "-t", f"{total:.3f}", "-movflags", "+faststart", str(out)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     blue_alpha = 1.0
+    hand = Hand(W) if cfg.get("hand_overlay") else None
+    tip = None
     try:
         for name, items, secs in plan:
             frames = max(1, int(secs * fps))
@@ -239,6 +286,11 @@ def render(picture: Path, out: Path, config: dict[str, Any] | None = None, music
             for k in range(frames):
                 upto = int(round(len(items) * (k + 1) / frames)) if items else 0
                 for it in items[done:upto]:
+                    if name == "black":                   # a filled area: the brush at its middle
+                        ys, xs = np.nonzero(it)
+                        tip = np.array([xs.mean(), ys.mean()]) if len(xs) else tip
+                    elif name in ("blue", "ink", "hatch"):
+                        tip = (it["pts"] if isinstance(it, dict) else it)[-1]   # where the tool is now
                     if name == "blue":
                         cv2.polylines(blue_l, [it.astype(np.int32)], False, 255, 3, cv2.LINE_AA)
                     elif name == "ink":
@@ -259,6 +311,10 @@ def render(picture: Path, out: Path, config: dict[str, Any] | None = None, music
                 frame = frame * (1 - b) + BLUE * b
                 i = (ink_l.astype(np.float32) / 255)[..., None]
                 frame = frame * (1 - i) + 14 * i
+                if hand is not None:
+                    tool = "pencil" if name == "blue" else "pen"
+                    live = name in ("blue", "ink", "hatch", "black")
+                    frame = hand.draw(frame, tool, tip if live else None, 1.0 / fps)
                 proc.stdin.write(np.clip(frame, 0, 255).astype(np.uint8).tobytes())
     finally:
         proc.stdin.close()

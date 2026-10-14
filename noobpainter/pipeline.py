@@ -192,7 +192,9 @@ def _ink_page(idea: str, style: str, out: Path, config: dict[str, Any],
         if is_manga:
             secs = sum(float(v) for v in {**manga.DEFAULTS, **(config.get("manga") or {})}["timing"])
             music = handplay.pick_music(secs, seed)
-            video = manga.render(ref, out / "manga.mp4", config, music, seed)
+            hand = bool((config.get("handplay") or {}).get("hand_overlay"))   # --hand / the app's tick box
+            mcfg = {**config, "manga": {**(config.get("manga") or {}), "hand_overlay": hand}}
+            video = manga.render(ref, out / "manga.mp4", mcfg, music, seed)
             title = "Watch this manga page come to life 🖋️"
             made = ("A blue pencil rough, brush-pen ink, hatching and solid blacks, then flat colour "
                     "under the ink")
