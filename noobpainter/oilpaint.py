@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+import os
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,7 @@ LOG = logging.getLogger("mken.oilpaint")
 
 ROOT = Path(__file__).resolve().parent.parent          # the repo root (assets/, vendor/)
 VENDOR = ROOT / "vendor" / "claude-paint"
-EASEL = VENDOR / "target" / "release" / "easel"
+EASEL = VENDOR / "target" / "release" / ("easel.exe" if os.name == "nt" else "easel")
 SWATCHES = ROOT / "assets" / "oilpaint" / "swatches.json"
 
 TUBES = ["lead white", "smalt", "pale smalt", "yellow ochre", "red earth", "vermilion",

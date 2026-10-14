@@ -30,7 +30,8 @@ LOG = logging.getLogger("localimage")
 
 COMFY_HOME = Path(os.environ.get("NOOBPAINTER_COMFY_HOME", Path.home() / "ComfyUI-Installs" / "ComfyUI"))
 COMFY_DIR = COMFY_HOME / "ComfyUI"
-COMFY_PYTHON = COMFY_HOME / "standalone-env" / "bin" / "python3"
+COMFY_PYTHON = (COMFY_HOME / "standalone-env" / "Scripts" / "python.exe" if os.name == "nt"
+                else COMFY_HOME / "standalone-env" / "bin" / "python3")
 
 DEFAULTS: dict[str, Any] = {
     "url": "http://127.0.0.1:8189",
@@ -211,16 +212,15 @@ def comfy_turn(cfg: dict[str, Any] | None = None, what: str = "a render"):
     itself if a job dies); waiting for an empty queue as well covers work queued
     by anything that doesn't take the lock. Timeouts start once it's our turn.
     """
-    import fcntl
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     handle = open(LOCK_FILE, "a+")
     began, told = time.time(), False
     try:
         while True:
             try:
-                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                _lock(handle)
                 break
-            except BlockingIOError:
+            except (BlockingIOError, PermissionError, OSError):
                 if not told:
                     LOG.info("ComfyUI is busy with another job; %s waits its turn", what)
                     told = True
@@ -236,9 +236,30 @@ def comfy_turn(cfg: dict[str, Any] | None = None, what: str = "a render"):
         yield
     finally:
         try:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+            _unlock(handle)
         finally:
             handle.close()
+
+
+def _lock(handle) -> None:
+    """Take the file lock without waiting (raises OSError if another job holds it)."""
+    if os.name == "nt":
+        import msvcrt
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _unlock(handle) -> None:
+    if os.name == "nt":
+        import msvcrt
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _queue_length(cfg: dict[str, Any]) -> int:

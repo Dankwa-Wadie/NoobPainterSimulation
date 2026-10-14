@@ -33,7 +33,15 @@ from PIL import Image, ImageFilter
 LOG = logging.getLogger("mken.carving")
 ROOT = Path(__file__).resolve().parent
 SCENE = ROOT / "relief_scene.py"
-BLENDER = Path(os.environ.get("NOOBPAINTER_BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender"))
+def _default_blender() -> str:
+    if os.name == "nt":                     # the newest Blender in Program Files
+        found = sorted(Path(os.environ.get("ProgramFiles", r"C:\Program Files")).glob(
+            "Blender Foundation/Blender*/blender.exe"))
+        return str(found[-1]) if found else "blender"
+    return "/Applications/Blender.app/Contents/MacOS/Blender"
+
+
+BLENDER = Path(os.environ.get("NOOBPAINTER_BLENDER", _default_blender()))
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 
 # (name, radius in canvas units, margin left above the target, most strokes, s of hand time a unit)

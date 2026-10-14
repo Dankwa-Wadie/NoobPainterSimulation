@@ -14,6 +14,7 @@ import mimetypes
 import threading
 import traceback
 import urllib.parse
+import os
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,6 +49,10 @@ def model_state() -> dict:
 def _install_model() -> None:
     import subprocess
     _model.update(status="running", log=[])
+    if os.name == "nt":
+        _model.update(status="failed", log=["The one-click image-model install is for macOS and Linux for now.",
+                                            "On Windows, see the README: install ComfyUI and the four model files by hand."])
+        return
     proc = subprocess.Popen(["bash", str(ROOT / "tools" / "install_image_model.sh")], stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, bufsize=1)
     for line in proc.stdout:
