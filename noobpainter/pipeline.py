@@ -201,6 +201,10 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
         video_out = out / "painting.mp4"
         handplay.render(painted / "frames", painted / "strokes.json", video_out, float(cfg["seconds"]),
                         (int(cfg["width"]), int(cfg["height"])), music, config=play)
+        # how the video was cut, so recut() can make it again with or without the hand
+        (out / "run.json").write_text(json.dumps({
+            "seconds": float(cfg["seconds"]), "size": [int(cfg["width"]), int(cfg["height"])],
+            "music": str(music) if music else None, "handplay": play["handplay"]}, indent=1), encoding="utf-8")
         title = title_for(style, seed, bool(cfg["shorts"]))
         desc = describe(idea, style, music, bool(cfg["shorts"]))
         (out / "credits.txt").write_text(f"{title}\n\n{desc}\n", encoding="utf-8")
@@ -211,6 +215,44 @@ def make(idea: str, style: str, out_dir: Path | str, config: dict[str, Any] | No
             progress.finish(title)
         return {"video": video_out, "image": image, "painting": painted / "painting.png", "title": title,
                 "description": desc, "upside_down": flip}
+    except Exception as e:
+        if owns:
+            progress.fail(str(e))
+        raise
+
+
+def can_recut(out_dir: Path | str) -> bool:
+    """Whether this video can be cut again (its painting's frames were kept)."""
+    out = Path(out_dir)
+    return (out / "run.json").exists() and any((out / "painted" / "frames").glob("*.png"))
+
+
+def recut(out_dir: Path | str, hand: bool) -> Path:
+    """The same painting's video again, with the hand (or without it): no painting again,
+    only the video is cut afresh from the kept frames (about a minute)."""
+    import handplay
+    import progress
+    out = Path(out_dir)
+    if not can_recut(out):
+        raise ValueError("this video's frames weren't kept, so it would have to be painted again")
+    run = json.loads((out / "run.json").read_text(encoding="utf-8"))
+    play = {**run["handplay"], "hand_overlay": bool(hand)}
+    owns = not progress.active()
+    if owns:
+        progress.start("", "Adding the hand" if hand else "Taking the hand away")
+    try:
+        progress.stage("assemble", "The hand on every stroke" if hand else "The painting without the hand")
+        tmp = out / "painting-recut.mp4"
+        handplay.render(out / "painted" / "frames", out / "painted" / "strokes.json", tmp,
+                        float(run["seconds"]), tuple(run["size"]),
+                        Path(run["music"]) if run.get("music") and Path(run["music"]).exists() else None,
+                        config={"handplay": play})
+        tmp.replace(out / "painting.mp4")
+        run["handplay"] = play
+        (out / "run.json").write_text(json.dumps(run, indent=1), encoding="utf-8")
+        if owns:
+            progress.finish("With the hand" if hand else "Without the hand")
+        return out / "painting.mp4"
     except Exception as e:
         if owns:
             progress.fail(str(e))

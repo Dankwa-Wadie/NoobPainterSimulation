@@ -193,12 +193,37 @@ def _run(job: dict) -> None:
     try:
         res = pipeline.make(job["idea"], job["style"], job["out"],
                             {"painting": {"seconds": job["seconds"], "playback": job["playback"],
-                                          "music": job["music"], "shorts": False},
+                                          "music": job["music"], "shorts": False, "keep_frames": True},
                              "handplay": {"hand_overlay": job["hand"]}},
                             picture=job.get("picture"), video=job.get("video"), pictures=job.get("pictures"))
         job.update(status="done", video=str(res["video"]) if res.get("video") else None,
                    image=str(res["image"]) if res.get("image") else None, title=res.get("title", ""),
-                   description=res.get("description", ""))
+                   description=res.get("description", ""), stamp=dt.datetime.now().timestamp())
+    except Exception as e:                                    # noqa: BLE001 - shown on the page
+        job.update(status="failed", error=f"{e}")
+        traceback.print_exc()
+    finally:
+        _prune_frames()
+
+
+KEEP_FRAMES = 3      # paintings whose frames are kept, so their video can be cut again
+
+
+def _prune_frames() -> None:
+    """Keep the frames of the last few paintings only: a few GB each."""
+    import shutil
+    runs = sorted((d for d in OUT.iterdir() if (d / "painted" / "frames").is_dir()),
+                  key=lambda d: d.stat().st_mtime, reverse=True) if OUT.exists() else []
+    for d in runs[KEEP_FRAMES:]:
+        shutil.rmtree(d / "painted" / "frames", ignore_errors=True)
+
+
+def _recut(job: dict, hand: bool) -> None:
+    """Add (or take away) the hand on the finished video: cut again, not painted again."""
+    import pipeline
+    try:
+        pipeline.recut(job["out"], hand)
+        job.update(status="done", hand=hand, stamp=dt.datetime.now().timestamp())
     except Exception as e:                                    # noqa: BLE001 - shown on the page
         job.update(status="failed", error=f"{e}")
         traceback.print_exc()
@@ -248,6 +273,13 @@ class Handler(BaseHTTPRequestHandler):
             for key in ("video", "image"):
                 if _job.get(key):
                     data[key] = "/out/" + str(Path(_job[key]).resolve().relative_to(OUT.resolve()))
+            if data.get("video") and _job.get("stamp"):
+                data["video"] += f"?v={_job['stamp']:.0f}"       # a cut-again video is fetched afresh
+            import pipeline
+            row = next((r for r in styles() if r["name"] == _job.get("style")), {})
+            data["recut"] = bool(_job.get("status") == "done" and _job.get("out") and row.get("hand")
+                                 and pipeline.can_recut(_job["out"]))
+            data["hand"], data["hand_tool"] = bool(_job.get("hand")), row.get("hand") or ""
             return self._json(200, data)
         if url.path.startswith("/previews/"):
             return self._file(PREVIEWS / urllib.parse.unquote(url.path[len("/previews/"):]), PREVIEWS)
@@ -302,6 +334,19 @@ class Handler(BaseHTTPRequestHandler):
             if _model.get("status") == "running":
                 return self._json(409, {"error": "already installing"})
             threading.Thread(target=_install_model, daemon=True).start()
+            return self._json(200, {"ok": True})
+        if url.path == "/api/recut":
+            import pipeline
+            if _job.get("status") == "running":
+                return self._json(409, {"error": "a painting is already being made"})
+            if not (_job.get("out") and pipeline.can_recut(_job["out"])):
+                return self._json(400, {"error": "this video can't be cut again: paint it again instead"})
+            try:
+                b = json.loads(self.rfile.read(length) or b"{}")
+            except ValueError:
+                return self._json(400, {"error": "bad request"})
+            _job.update(status="running", error=None)
+            threading.Thread(target=_recut, args=(_job, bool(b.get("hand"))), daemon=True).start()
             return self._json(200, {"ok": True})
         if url.path == "/api/paint":
             if _job.get("status") == "running":
@@ -473,7 +518,11 @@ let styleRows=[];const pictureOnly=()=>document.querySelector('input[name=make]:
 // "just the picture" has no video options, and the moving and ink styles are videos by nature
 function syncMake(){const p=pictureOnly(),row=styleRows.find(r=>r.name===style);
  $('#videoopts').style.display=p?'none':'';$('#musicopts').style.display=p?'none':'';
- $('#makenote').textContent=p&&row&&row.video_only?`${nice(style)} is only made as a video: choose another style for a picture.`:'';
+ // styles that are only a video have no "just the picture": greyed out, and the video chosen
+ const vonly=!!(row&&row.video_only),pic=document.querySelector('input[name=make][value=picture]');
+ pic.disabled=vonly;pic.parentElement.style.opacity=vonly?'.45':'';pic.parentElement.title=vonly?`${nice(style)} is only made as a video`:'';
+ if(vonly&&pic.checked){document.querySelector('input[name=make][value=video]').checked=true;return syncMake();}
+ $('#makenote').textContent=vonly?`${nice(style)} is only made as a video.`:'';
  $('#go').textContent=p?'Paint the picture':'Paint it';
  // not every style has a hand: the compass draws alone, the moving and halftone styles have none
  const tool=row?row.hand:'the brush';$('#hand').disabled=!tool;if(!tool)$('#hand').checked=false;
@@ -545,6 +594,9 @@ async function send(files){if(!files.length)return;$('#formerr').textContent='';
   if(u.kind==='video'||(uploads[0]&&uploads[0].kind==='video')||!row.multi)uploads=[u];   // one at a time; a video alone
   else if(uploads.length<8)uploads.push(u);else $('#formerr').textContent='8 pictures at most';}
  showUploads();}
+document.addEventListener('click',async e=>{if(e.target.id!=='recut')return;e.target.disabled=true;
+ const r=await fetch('/api/recut',{method:'POST',body:JSON.stringify({hand:e.target.dataset.hand==='1'})});const j=await r.json();
+ if(!r.ok){$('#formerr').textContent=j.error;e.target.disabled=false;return;}$('#result').innerHTML='';poll();});
 $('#go').onclick=async()=>{$('#formerr').textContent='';
  const body={style,idea:$('#idea').value,files:((styleRows.find(r=>r.name===style)||{}).multi?uploads:uploads.slice(0,1)).map(u=>u.file),seconds:+$('#secs').value,hand:$('#hand').checked,playback:!pictureOnly(),music:musicChoice(),music_file:ownMusic&&ownMusic.file};
  const r=await fetch('/api/paint',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
@@ -555,7 +607,8 @@ async function poll(){const r=await fetch('/api/job');const j=await r.json();
  $('#pct').textContent=st?Math.floor(j.percent||0)+'%':'';$('#bar').style.width=(j.percent||0)+'%';$('#detail').textContent=j.error||j.detail||'';
  $('#log').textContent=(j.log||[]).join('\n');
  if(j.preview&&j.preview_at!==lastPreview&&st==='running'){lastPreview=j.preview_at;$('#live').innerHTML=`<img src="${j.preview}?t=${lastPreview}" alt="The canvas so far">`;}
- if(st==='done'&&j.video){$('#live').innerHTML='';$('#result').innerHTML=`<video src="${j.video}" controls autoplay playsinline></video><a class="dl" href="${j.video}" download="painting.mp4">Download the video</a>`+(j.image?` &nbsp; <a class="dl" href="${j.image}" download="painting.png">Download the picture</a>`:'');}
+ if(st==='done'&&j.video){$('#live').innerHTML='';$('#result').innerHTML=`<video src="${j.video}" controls autoplay playsinline></video><a class="dl" href="${j.video}" download="painting.mp4">Download the video</a>`+(j.image?` &nbsp; <a class="dl" href="${j.image}" download="painting.png">Download the picture</a>`:'')+
+  (j.recut?`<p class="model">${j.hand?'The hand is shown.':'No hand in this video.'} <button type="button" id="recut" data-hand="${j.hand?0:1}">${j.hand?'Remove the hand':'Add the hand holding '+j.hand_tool}</button> <span class="muted">(about a minute: the video is cut again, not painted again)</span></p>`:'');}
  else if(st==='done'&&j.image){$('#live').innerHTML='';$('#result').innerHTML=`<img src="${j.image}" alt="The finished painting"><a class="dl" href="${j.image}" download="painting.png">Download the picture</a>`;}
  if(st==='running')setTimeout(poll,2000);}
 async function model(){const r=await fetch('/api/model');const m=await r.json();const el=$('#model');
