@@ -7,9 +7,9 @@ It is not a filter. A real paint simulator mixes paint from named tubes, pushes 
 around with bristles, and lets it dry; this project decides, stroke by stroke, where a
 painter would put each one, and records the whole thing.
 
-[![Watch the 20-second overview: a painting being made, how it works, other materials, moving paintings](docs/media/reel-poster.jpg)](https://github.com/Dankwa-Wadie/NoobPainterSimulation/releases/download/v0.1.0/noobpainter-overview.mp4)
+[![Watch the 24-second overview: a painting being made, how it works, an idea drawn by a local image model, carving in Blender, moving paintings](docs/media/reel-poster.jpg)](https://github.com/Dankwa-Wadie/NoobPainterSimulation/releases/download/v0.1.0/noobpainter-overview.mp4)
 
-*20-second overview (click to watch). The longer one-minute version is on the [Releases page](../../releases).*
+*24-second overview (click to watch). A longer version is on the [Releases page](../../releases).*
 
 | Oil (Van Gogh style) | Pencil and ruler | Pen maze | Compass spiral |
 |:---:|:---:|:---:|:---:|
