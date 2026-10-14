@@ -80,9 +80,12 @@ if (Test-Path (Join-Path $Dir ".git")) {
     # An update. If GitHub's history was rewritten, a plain pull can't move this copy on;
     # with no edits of its own, it is safe to move it to GitHub's version.
     Run git -C $Dir fetch origin
-    git -C $Dir merge --ff-only origin/main 2>$null | Out-Null
+    # git's notes go to stderr; in Windows PowerShell, with "Stop", a redirected note is
+    # a fatal error. Only the exit code matters here.
+    & { $ErrorActionPreference = "Continue"; git -C $Dir merge --ff-only origin/main 2>&1 | Out-Null }
     if ($LASTEXITCODE -ne 0) {
-        if (git -C $Dir status --porcelain --untracked-files=no) {
+        $edits = & { $ErrorActionPreference = "Continue"; git -C $Dir status --porcelain --untracked-files=no 2>$null }
+        if ($edits) {
             throw "Your copy in $Dir has edits of its own, so it can't be updated automatically. Keep them elsewhere, then run: git -C `"$Dir`" reset --hard origin/main"
         }
         Run git -C $Dir reset --hard origin/main
