@@ -76,7 +76,18 @@ if (-not (Have cargo)) {
 Refresh-Path
 
 Say "Downloading NoobPainterSimulation into $Dir"
-if (Test-Path (Join-Path $Dir ".git")) { Run git -C $Dir pull --ff-only }
+if (Test-Path (Join-Path $Dir ".git")) {
+    # An update. If GitHub's history was rewritten, a plain pull can't move this copy on;
+    # with no edits of its own, it is safe to move it to GitHub's version.
+    Run git -C $Dir fetch origin
+    git -C $Dir merge --ff-only origin/main 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        if (git -C $Dir status --porcelain --untracked-files=no) {
+            throw "Your copy in $Dir has edits of its own, so it can't be updated automatically. Keep them elsewhere, then run: git -C `"$Dir`" reset --hard origin/main"
+        }
+        Run git -C $Dir reset --hard origin/main
+    }
+}
 else { Run git clone $Repo $Dir }
 Set-Location $Dir
 

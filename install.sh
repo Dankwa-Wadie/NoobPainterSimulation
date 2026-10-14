@@ -52,7 +52,17 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 say "Downloading NoobPainterSimulation into $DIR"
 if [ -d "$DIR/.git" ]; then
-  git -C "$DIR" pull --ff-only
+  # An update. If GitHub's history was rewritten, a plain pull can't move this copy on;
+  # with no edits of its own, it is safe to move it to GitHub's version.
+  git -C "$DIR" fetch origin
+  if ! git -C "$DIR" merge --ff-only origin/main 2>/dev/null; then
+    if [ -n "$(git -C "$DIR" status --porcelain --untracked-files=no)" ]; then
+      echo "Your copy in $DIR has edits of its own, so it can't be updated automatically." >&2
+      echo "Keep them elsewhere, then run: git -C \"$DIR\" reset --hard origin/main" >&2
+      exit 1
+    fi
+    git -C "$DIR" reset --hard origin/main
+  fi
 else
   git clone "$REPO" "$DIR"
 fi
