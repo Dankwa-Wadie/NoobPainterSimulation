@@ -50,6 +50,7 @@ def styles() -> list[dict]:
     for name, note in (("bizarre_manga", "inked, then coloured"), ("comic_halftone", "dots, then a slow blur")):
         rows.append({"name": name, "medium": "Ink", "note": note,
                      "preview": (PREVIEWS / f"{name}.gif").exists()})
+    rows.sort(key=lambda r: r["name"] != "contemporary")     # the default first
     return rows
 
 
@@ -187,7 +188,7 @@ label{display:block;margin:14px 0 6px;font-weight:600}input[type=text],input[typ
 .card{border:2px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;background:var(--bg);text-align:left;color:var(--ink);font:inherit}
 .card.on{border-color:var(--accent)}.card img,.card .ph{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:6px;display:block;background:var(--line)}
 .card b{display:block;font-size:13px;margin-top:5px}.card small{color:var(--muted);font-size:11.5px}
-button.go{margin-top:18px;width:100%;padding:13px;border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font:600 16px/1 inherit;cursor:pointer}button.go:disabled{opacity:.5;cursor:default}
+button.go{margin-top:18px;width:100%;padding:13px;border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-family:inherit;font-size:16px;font-weight:600;line-height:1;cursor:pointer}button.go:disabled{opacity:.5;cursor:default}
 .bar{height:10px;background:var(--line);border-radius:10px;overflow:hidden;margin:10px 0}.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .6s}
 .status{display:flex;justify-content:space-between;gap:10px}.muted{color:var(--muted)}.err{color:#c4372b}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;max-height:170px;overflow:auto;font-size:12px;white-space:pre-wrap}
@@ -222,7 +223,10 @@ const $=s=>document.querySelector(s);let upload=null,style='contemporary',lastPr
 const NAMES={anim_van_gogh:'Van Gogh (moving)',anim_oil_morph:'Oil paint (moving)',bw_exaggerated:'B&W exaggerated',compass_spiral:'Compass spiral',relief_wood:'Relief: wood',relief_marble:'Relief: marble',relief_clay:'Relief: clay',old_master:'Old Master',van_gogh:'Van Gogh',bizarre_manga:'Bizarre manga',comic_halftone:'Comic halftone'};
 const nice=n=>NAMES[n]||n.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 async function loadStyles(){const r=await fetch('/api/styles');const j=await r.json();
- $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}</small></button>`).join('');}
+ $('#styles').innerHTML=j.styles.map(s=>`<button type="button" class="card${s.name===style?' on':''}" data-style="${s.name}">${s.preview?`<img src="/previews/${s.name}-final.jpg" data-still="/previews/${s.name}-final.jpg" data-play="/previews/${s.name}.gif" alt="" loading="lazy">`:'<div class="ph"></div>'}<b>${nice(s.name)}</b><small>${s.medium}${s.note?' · '+s.note:''}</small></button>`).join('');}
+// the finished piece as a still; the preview of its making plays on hover
+$('#styles').addEventListener('mouseover',e=>{const i=e.target.closest('.card')?.querySelector('img');if(i&&i.dataset.play&&i.src.indexOf('.gif')<0)i.src=i.dataset.play;});
+$('#styles').addEventListener('mouseout',e=>{const c=e.target.closest('.card');if(!c||c.contains(e.relatedTarget))return;const i=c.querySelector('img');if(i&&i.dataset.still)i.src=i.dataset.still;});
 $('#styles').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;style=c.dataset.style;document.querySelectorAll('.card').forEach(x=>x.classList.toggle('on',x===c));});
 const drop=$('#drop');drop.onclick=()=>$('#file').click();
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
